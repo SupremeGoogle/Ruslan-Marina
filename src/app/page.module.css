@@ -1037,10 +1037,10 @@
   }
 
   .glassCard {
-    /* 10% smaller + shifted further down on mobile */
+    /* 10% smaller + shifted 30% down on mobile */
     width: min(432px, 83vw);  /* 92vw * 0.9 = 82.8vw ≈ 83vw */
     padding: 32px 20px 28px;
-    transform: translateY(20vh) scale(0.9);
+    transform: translateY(30vh) scale(0.9);
     transform-origin: center top;
   }
   .glassCardTitle {
