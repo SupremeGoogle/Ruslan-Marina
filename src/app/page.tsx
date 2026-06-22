@@ -559,10 +559,17 @@ export default function Home() {
 
         {/* User bar */}
         {guest && (
-          <div className={`${styles.welcomeUserBar} glass-panel-light`}>
+          <div className={`${styles.welcomeUserBar} glass-panel-light`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', gap: '16px' }}>
             <div className={styles.userName}>
               Приветствуем, <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{guest.firstName} {guest.lastName}</span>!
             </div>
+            <button 
+              onClick={handleLogout}
+              className="btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+            >
+              Сменить имя
+            </button>
           </div>
         )}
 
