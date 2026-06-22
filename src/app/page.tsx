@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
 import Petals from '@/components/Petals';
@@ -25,6 +25,8 @@ interface Photo {
 export default function Home() {
   const [guest, setGuest] = useState<Guest | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  // loginStep: 'welcome' = greeting screen | 'video' = playing video | 'form' = name input
+  const [loginStep, setLoginStep] = useState<'welcome' | 'video' | 'form'>('welcome');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   
@@ -44,6 +46,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeUploadIndexRef = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check if Supabase is configured
   const isSupabaseConfigured = !!supabase;
@@ -308,8 +312,18 @@ export default function Home() {
     setFirstName('');
     setLastName('');
     setUserPhotos([]);
+    setLoginStep('welcome');
     setShowLoginModal(true);
   };
+
+  // Start video, auto-advance to form after 7 seconds
+  const handleStartVideo = useCallback(() => {
+    setLoginStep('video');
+    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
+    videoTimerRef.current = setTimeout(() => {
+      setLoginStep('form');
+    }, 7000);
+  }, []);
 
   // 5. Image Upload & Replacement Logic
   const handleSlotClick = (index: number) => {
@@ -685,60 +699,98 @@ export default function Home() {
           )}
         </section>
 
-        {/* Guest Registration/Welcome Dialog (Modal) */}
+        {/* Guest Registration/Welcome Dialog (Modal) — 3-step flow */}
         {showLoginModal && (
           <div className={styles.modalOverlay}>
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: 0.35,
-                zIndex: 0,
-                pointerEvents: 'none'
-              }}
-            >
-              <source src="/wedding_video.mp4" type="video/mp4" />
-            </video>
-            <div className={`${styles.modalContent} glass-panel`} style={{ zIndex: 1, position: 'relative' }}>
-              <h2 className={`${styles.modalTitle} handwritten`}>Добро пожаловать!</h2>
-              <p className={styles.modalText}>
-                Рады видеть вас на свадьбе Руслана и Марины. <br />
-                Пожалуйста, введите свое имя и фамилию, чтобы делиться счастливыми моментами в общей галерее.
-              </p>
-              
-              <form onSubmit={handleRegister}>
-                <div className={styles.formGroup}>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ваше Имя"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className={styles.inputField}
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ваша Фамилия"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className={styles.inputField}
-                  />
+
+            {/* ── STEP 1: Welcome greeting ── */}
+            {loginStep === 'welcome' && (
+              <div className={styles.welcomeStep}>
+                {/* Decorative hearts */}
+                <div className={styles.welcomeHearts} aria-hidden="true">
+                  <span>♥</span><span>♥</span><span>♥</span>
                 </div>
-                
-                <button type="submit" className="btn-primary" style={{ width: '100%' }}>
-                  Войти на сайт
+                <h2 className={`${styles.welcomeStepTitle} handwritten`}>
+                  Руслан&nbsp;&amp;&nbsp;Марина
+                </h2>
+                <p className={styles.welcomeStepDate}>22 июня 2026</p>
+                <p className={styles.welcomeStepText}>
+                  Добро пожаловать на наш свадебный день!<br />
+                  Мы рады разделить этот особенный момент вместе с вами.
+                </p>
+                <button
+                  className={`${styles.startBtn} btn-primary`}
+                  onClick={handleStartVideo}
+                >
+                  <span className={styles.startBtnIcon}>▶</span>
+                  Начать
                 </button>
-              </form>
-            </div>
+              </div>
+            )}
+
+            {/* ── STEP 2: Video playback (7 seconds) ── */}
+            {loginStep === 'video' && (
+              <div className={styles.videoStep}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  onEnded={() => setLoginStep('form')}
+                  className={styles.fullscreenVideo}
+                >
+                  <source src="/wedding_video.mp4" type="video/mp4" />
+                </video>
+                {/* Progress bar showing 7 seconds */}
+                <div className={styles.videoProgressBar}>
+                  <div className={styles.videoProgressFill} style={{ animationDuration: '7s' }} />
+                </div>
+                {/* Skip button */}
+                <button
+                  className={styles.videoSkipBtn}
+                  onClick={() => {
+                    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
+                    setLoginStep('form');
+                  }}
+                >
+                  Пропустить ›
+                </button>
+              </div>
+            )}
+
+            {/* ── STEP 3: Name / surname form ── */}
+            {loginStep === 'form' && (
+              <div className={`${styles.modalContent} glass-panel`}>
+                <h2 className={`${styles.modalTitle} handwritten`}>Как вас зовут?</h2>
+                <p className={styles.modalText}>
+                  Введите своё имя и фамилию, чтобы делиться<br />
+                  счастливыми моментами в общей галерее.
+                </p>
+                <form onSubmit={handleRegister}>
+                  <div className={styles.formGroup}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ваше Имя"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className={styles.inputField}
+                    />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ваша Фамилия"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className={styles.inputField}
+                    />
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+                    Войти на сайт
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
 
