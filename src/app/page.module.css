@@ -1048,6 +1048,12 @@
     padding: 32px 20px 28px;
     transform: translateY(30vh) scale(0.9);
     transform-origin: center top;
+    animation-name: mobileCardIn;
+  }
+
+  @keyframes mobileCardIn {
+    from { opacity: 0; transform: translateY(34vh) scale(0.87); }
+    to   { opacity: 1; transform: translateY(30vh) scale(0.9); }
   }
   .glassCardTitle {
     font-size: 2.4rem;
