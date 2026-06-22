@@ -568,7 +568,7 @@ export default function Home() {
               className="btn-secondary"
               style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
             >
-              Сменить имя
+              Выйти
             </button>
           </div>
         )}
@@ -688,7 +688,26 @@ export default function Home() {
         {/* Guest Registration/Welcome Dialog (Modal) */}
         {showLoginModal && (
           <div className={styles.modalOverlay}>
-            <div className={`${styles.modalContent} glass-panel`}>
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: 0.35,
+                zIndex: 0,
+                pointerEvents: 'none'
+              }}
+            >
+              <source src="/wedding_video.mp4" type="video/mp4" />
+            </video>
+            <div className={`${styles.modalContent} glass-panel`} style={{ zIndex: 1, position: 'relative' }}>
               <h2 className={`${styles.modalTitle} handwritten`}>Добро пожаловать!</h2>
               <p className={styles.modalText}>
                 Рады видеть вас на свадьбе Руслана и Марины. <br />
