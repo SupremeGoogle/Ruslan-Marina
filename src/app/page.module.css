@@ -346,7 +346,8 @@
 
 @media (max-width: 480px) {
   .galleryGrid {
-    column-count: 1;
+    column-count: 2;
+    column-gap: 10px;
   }
 }
 
@@ -719,21 +720,29 @@
   }
 
   .galleryGrid {
-    column-gap: 12px;
+    column-count: 2;
+    column-gap: 10px;
   }
 
   .galleryItem {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+  }
+
+  .galleryImage {
+    height: auto;
   }
 
   .galleryInfo {
-    padding: 8px 12px;
-    flex-wrap: wrap;
-    gap: 4px;
+    padding: 6px 10px;
   }
 
   .galleryAuthor {
-    font-size: 0.85rem;
+    font-size: 0.78rem;
+  }
+
+  .galleryTime {
+    font-size: 0.68rem;
   }
 
   .emptyGallery {
@@ -1017,18 +1026,37 @@
 
 /* ── Mobile overrides for glassmorphism card ── */
 @media (max-width: 480px) {
+  /* Overlay shifts card lower */
+  .modalOverlay {
+    align-items: flex-start;
+    padding-top: 55vh; /* ~10% lower than center */
+    /* Card is centered at ~60% height = visually ~10% below center */
+    align-items: center;
+    padding-top: 0;
+    transform-origin: center;
+  }
+
   .glassCard {
-    padding: 36px 24px 32px;
+    /* 10% smaller + shifted 10% down */
+    width: min(432px, 83vw);  /* 92vw * 0.9 = 82.8vw ≈ 83vw */
+    padding: 32px 20px 28px;
+    transform: translateY(10vh) scale(0.9);
+    transform-origin: center top;
   }
   .glassCardTitle {
-    font-size: 2.8rem;
+    font-size: 2.4rem;
   }
   .glassCardText {
-    font-size: 0.88rem;
-    margin-bottom: 24px;
+    font-size: 0.84rem;
+    margin-bottom: 20px;
   }
   .startBtn {
-    padding: 12px 28px;
-    font-size: 0.9rem;
+    padding: 11px 24px;
+    font-size: 0.85rem;
+  }
+  .glassInput {
+    padding: 11px 16px;
+    font-size: 0.88rem;
   }
 }
+
