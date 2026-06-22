@@ -379,11 +379,11 @@
   gap: 10px;
 }
 
-.collageItem1 { grid-column: span 3; grid-row: span 2; }
-.collageItem2 { grid-column: span 3; grid-row: span 2; }
-.collageItem3 { grid-column: span 2; grid-row: span 1.5; }
-.collageItem4 { grid-column: span 2; grid-row: span 1.5; }
-.collageItem5 { grid-column: span 2; grid-row: span 1.5; }
+.winnerCollageWrapper {
+  width: 100%;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
 
 .collageImg {
   width: 100%;

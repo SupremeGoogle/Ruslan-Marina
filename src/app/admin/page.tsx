@@ -32,6 +32,68 @@ interface ParticipantProgress {
   photos: Photo[];
 }
 
+interface AdaptiveCollageProps {
+  photos: Photo[];
+  title?: string;
+  isWinner?: boolean;
+}
+
+const AdaptiveCollage: React.FC<AdaptiveCollageProps> = ({ photos, title, isWinner }) => {
+  const [orientations, setOrientations] = useState<Record<string, 'horizontal' | 'vertical'>>({});
+
+  useEffect(() => {
+    photos.forEach((photo) => {
+      if (orientations[photo.id]) return;
+      const img = new globalThis.Image();
+      img.src = photo.url;
+      img.onload = () => {
+        setOrientations((prev) => ({
+          ...prev,
+          [photo.id]: img.naturalWidth >= img.naturalHeight ? 'horizontal' : 'vertical',
+        }));
+      };
+    });
+  }, [photos, orientations]);
+
+  return (
+    <div className={isWinner ? styles.winnerCollageWrapper : styles.sweepingCollage}>
+      {title && <h3 className={styles.collageTitle}>{title}</h3>}
+      <div className={styles.collageGrid}>
+        {photos.map((photo) => {
+          const orientation = orientations[photo.id] || 'horizontal';
+          const gridColumn = orientation === 'vertical' ? 'span 2' : 'span 3';
+          const gridRow = orientation === 'vertical' ? 'span 3' : 'span 2';
+          
+          return (
+            <div 
+              key={photo.id} 
+              style={{ 
+                gridColumn, 
+                gridRow,
+                position: 'relative',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '2px solid white'
+              }}
+            >
+              <img 
+                src={photo.url} 
+                alt="Кадр" 
+                className={styles.collageImg}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -659,18 +721,11 @@ export default function AdminPage() {
           <div className={styles.animationContainer}>
             {/* Phase 1: Reveal sweeping collages one by one */}
             {animStage === 'reveal' && eligibleGuests[currentRevealIndex] && (
-              <div className={styles.sweepingCollage} key={currentRevealIndex}>
-                <h3 className={styles.collageTitle}>
-                  Снимки от: {eligibleGuests[currentRevealIndex].firstName} {eligibleGuests[currentRevealIndex].lastName}
-                </h3>
-                <div className={styles.collageGrid}>
-                  {eligibleGuests[currentRevealIndex].photos.map((p, idx) => (
-                    <div key={p.id} className={styles[`collageItem${idx + 1}`] || styles.collageItem3}>
-                      <img src={p.url} alt="Коллаж кадр" className={styles.collageImg} />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <AdaptiveCollage 
+                key={currentRevealIndex}
+                photos={eligibleGuests[currentRevealIndex].photos}
+                title={`Снимки от: ${eligibleGuests[currentRevealIndex].firstName} ${eligibleGuests[currentRevealIndex].lastName}`}
+              />
             )}
 
             {/* Phase 2: Scrambled grid animation where all collages rotate & fly */}
@@ -703,11 +758,10 @@ export default function AdminPage() {
                 <div className={styles.winnerLabel}>Обладатель главного приза!</div>
                 <h3 className={styles.winnerName}>{winner.firstName} {winner.lastName}</h3>
                 
-                <div className={styles.winnerCollageGrid}>
-                  {winner.photos.map((p) => (
-                    <img key={p.id} src={p.url} alt="Победитель кадр" className={styles.winnerCollageImg} />
-                  ))}
-                </div>
+                <AdaptiveCollage 
+                  photos={winner.photos}
+                  isWinner={true}
+                />
 
                 <button onClick={closeRandomizer} className={styles.btnCloseRandomizer}>
                   Закрыть и продолжить
