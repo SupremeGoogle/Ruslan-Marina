@@ -54,25 +54,45 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif);
   font-weight: 400;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  line-height: 1.25;
 }
 
+/* 🌹 Handwritten / Script — Great Vibes */
 .handwritten {
   font-family: var(--font-handwriting);
-  font-size: 2.2rem;
-  color: var(--color-primary);
+  font-size: 2.8rem;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  /* Rich gold-rose gradient text */
+  background: linear-gradient(
+    135deg,
+    #c8925a 0%,
+    #b58d72 25%,
+    #d4af37 55%,
+    #b58d72 80%,
+    #c8925a 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Subtle depth */
+  filter: drop-shadow(0 1px 2px rgba(181,141,114,0.25));
 }
 
 .title-main {
-  font-size: 3.5rem;
+  font-size: 3.8rem;
   font-family: var(--font-serif);
+  font-weight: 300;
   color: var(--text-main);
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
 }
 
 .title-sub {
-  font-size: 1.1rem;
-  letter-spacing: 0.15em;
+  font-size: 1.05rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--color-secondary);
   font-family: var(--font-sans);

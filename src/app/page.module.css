@@ -21,20 +21,33 @@
 }
 
 .weddingTitle {
-  font-size: 3.5rem;
-  color: var(--color-primary);
+  font-size: clamp(3rem, 8vw, 5rem);
   font-family: var(--font-handwriting);
-  margin-top: 8px;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+  font-weight: 400;
+  margin-top: 4px;
+  line-height: 1.05;
+  /* Gold-rose gradient */
+  background: linear-gradient(
+    135deg,
+    #c8925a 0%,
+    #b58d72 25%,
+    #d4af37 55%,
+    #b58d72 80%,
+    #c8925a 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 1px 4px rgba(181,141,114,0.2));
 }
 
 .namesSubtitle {
   font-family: var(--font-serif);
-  font-size: 1.2rem;
-  letter-spacing: 0.15em;
+  font-size: 1rem;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--color-secondary);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* Timer Section */
@@ -145,11 +158,15 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-serif);
-  font-size: 1.8rem;
+  font-family: var(--font-handwriting);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
   text-align: center;
-  margin-bottom: 8px;
-  color: var(--text-main);
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #c8925a 0%, #d4af37 50%, #b58d72 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 1px 2px rgba(181,141,114,0.15));
 }
 
 .sectionSubtitle {
@@ -420,9 +437,14 @@
 
 .modalTitle {
   font-family: var(--font-handwriting);
-  font-size: 2.8rem;
-  color: var(--color-primary);
-  margin-bottom: 8px;
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  background: linear-gradient(135deg, #c8925a 0%, #d4af37 50%, #b58d72 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 1px 3px rgba(181,141,114,0.2));
+  margin-bottom: 10px;
+  line-height: 1.1;
 }
 
 .modalText {
@@ -824,11 +846,24 @@
 }
 
 .welcomeStepTitle {
-  font-size: clamp(2.6rem, 8vw, 4rem);
-  color: var(--color-text-light);
-  margin: 0 0 8px;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.4);
+  font-family: var(--font-handwriting);
+  font-size: clamp(3.2rem, 10vw, 5.5rem);
+  font-weight: 400;
+  margin: 0 0 6px;
   line-height: 1.1;
+  /* Gold shimmer on dark background */
+  background: linear-gradient(
+    135deg,
+    #f5d896 0%,
+    #d4af37 30%,
+    #fff8e7 55%,
+    #d4af37 75%,
+    #f5d896 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 12px rgba(212,175,55,0.4));
 }
 
 .welcomeStepDate {

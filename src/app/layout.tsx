@@ -1,14 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Marck_Script, Cormorant_Garamond, Montserrat } from "next/font/google";
+import { Great_Vibes, Cormorant_Garamond, Nunito } from "next/font/google";
 import "./globals.css";
 
-const marckScript = Marck_Script({
+// 🌹 Great Vibes — роскошный каллиграфический скрипт для заголовков и имён
+const greatVibes = Great_Vibes({
   weight: "400",
   variable: "--font-handwriting",
-  subsets: ["latin", "cyrillic"],
+  subsets: ["latin"],
   display: "swap",
 });
 
+// 📖 Cormorant Garamond — элегантный серифный для подзаголовков
 const cormorantGaramond = Cormorant_Garamond({
   weight: ["300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
@@ -17,7 +19,8 @@ const cormorantGaramond = Cormorant_Garamond({
   display: "swap",
 });
 
-const montserrat = Montserrat({
+// ✍️ Nunito — мягкий, читаемый sans-serif для основного текста
+const nunito = Nunito({
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
   subsets: ["latin", "cyrillic"],
@@ -44,10 +47,9 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${marckScript.variable} ${cormorantGaramond.variable} ${montserrat.variable}`}
+      className={`${greatVibes.variable} ${cormorantGaramond.variable} ${nunito.variable}`}
     >
       <body>{children}</body>
     </html>
   );
 }
-
