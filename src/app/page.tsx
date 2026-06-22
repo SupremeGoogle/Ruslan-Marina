@@ -45,9 +45,7 @@ export default function Home() {
   const activeUploadIndexRef = useRef<number | null>(null);
 
   // Check if Supabase is configured
-  const isSupabaseConfigured = 
-    process.env.NEXT_PUBLIC_SUPABASE_URL && 
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your-supabase-project-url';
+  const isSupabaseConfigured = !!supabase;
 
   // 1. Detect IP and load guest session
   useEffect(() => {

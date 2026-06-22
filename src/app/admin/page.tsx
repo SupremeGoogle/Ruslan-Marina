@@ -55,9 +55,7 @@ export default function AdminPage() {
   const [revealedGuests, setRevealedGuests] = useState<ParticipantProgress[]>([]);
   const [winner, setWinner] = useState<ParticipantProgress | null>(null);
 
-  const isSupabaseConfigured = 
-    process.env.NEXT_PUBLIC_SUPABASE_URL && 
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your-supabase-project-url';
+  const isSupabaseConfigured = !!supabase;
 
   // 1. Verify Session Authenticated on Mount
   useEffect(() => {
