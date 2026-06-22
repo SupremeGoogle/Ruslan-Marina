@@ -29,6 +29,7 @@ export default function Home() {
   const [loginStep, setLoginStep] = useState<'welcome' | 'video' | 'form'>('welcome');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [isChangingName, setIsChangingName] = useState(false);
   
   // Timer State
   const [timerStatus, setTimerStatus] = useState<'running' | 'paused' | 'reset'>('reset');
@@ -226,6 +227,80 @@ export default function Home() {
       ip: clientIp,
     };
 
+    if (isChangingName && guest) {
+      if (!isSupabaseConfigured) {
+        const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
+        const mockGuests = JSON.parse(mockGuestsStr);
+        const updatedGuests = mockGuests.map((g: any) =>
+          g.id === guest.id
+            ? { ...g, first_name: cleanFirst, last_name: cleanLast, ip_address: clientIp }
+            : g
+        );
+        localStorage.setItem('mock_guests', JSON.stringify(updatedGuests));
+
+        const mockPhotosStr = localStorage.getItem('mock_photos') || '[]';
+        const mockPhotos = JSON.parse(mockPhotosStr) as Photo[];
+        const updatedPhotos = mockPhotos.map((photo) =>
+          photo.guest_id === guest.id
+            ? { ...photo, guest_name: `${cleanFirst} ${cleanLast}` }
+            : photo
+        );
+        localStorage.setItem('mock_photos', JSON.stringify(updatedPhotos));
+
+        const sessionGuest: Guest = {
+          id: guest.id,
+          firstName: cleanFirst,
+          lastName: cleanLast,
+          ip: clientIp,
+        };
+
+        localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
+        setGuest(sessionGuest);
+        setShowLoginModal(false);
+        setIsChangingName(false);
+        fetchPhotos();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/guest/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            guestId: guest.id,
+            firstName: cleanFirst,
+            lastName: cleanLast,
+            ip: clientIp,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Rename failed');
+        }
+
+        const sessionGuest: Guest = {
+          id: guest.id,
+          firstName: cleanFirst,
+          lastName: cleanLast,
+          ip: clientIp,
+        };
+
+        localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
+        setGuest(sessionGuest);
+        setShowLoginModal(false);
+        setIsChangingName(false);
+        fetchPhotos();
+      } catch (err) {
+        console.error('Name change failed:', err);
+        alert('Не удалось изменить имя. Возможно, такой гость уже существует.');
+      }
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       // Mock register guest
       const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
@@ -256,6 +331,7 @@ export default function Home() {
       localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
       setGuest(sessionGuest);
       setShowLoginModal(false);
+      setIsChangingName(false);
       return;
     }
 
@@ -299,20 +375,19 @@ export default function Home() {
       localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
       setGuest(sessionGuest);
       setShowLoginModal(false);
+      setIsChangingName(false);
     } catch (err) {
       console.error('Registration failed:', err);
       alert('Произошла ошибка при входе. Попробуйте еще раз.');
     }
   };
 
-  // Log out or change name
-  const handleLogout = () => {
-    localStorage.removeItem('wedding_guest_session');
-    setGuest(null);
-    setFirstName('');
-    setLastName('');
-    setUserPhotos([]);
-    setLoginStep('welcome');
+  const handleChangeNameClick = () => {
+    if (!guest) return;
+    setFirstName(guest.firstName);
+    setLastName(guest.lastName);
+    setIsChangingName(true);
+    setLoginStep('form');
     setShowLoginModal(true);
   };
 
@@ -578,11 +653,11 @@ export default function Home() {
               Приветствуем, <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{guest.firstName} {guest.lastName}</span>!
             </div>
             <button 
-              onClick={handleLogout}
+              onClick={handleChangeNameClick}
               className="btn-secondary"
               style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
             >
-              Выйти
+              Сменить имя
             </button>
           </div>
         )}
@@ -725,13 +800,15 @@ export default function Home() {
                   Руслан&nbsp;&amp;&nbsp;Марина
                 </h2>
                 <p className={styles.glassCardText}>
-                  Добро пожаловать на наш свадебный день! Мы рады разделить этот особенный момент вместе с вами.
+                  {isChangingName
+                    ? 'Обновите имя и фамилию. Ваши уже загруженные фотографии останутся на месте.'
+                    : 'Добро пожаловать на наш свадебный день! Мы рады разделить этот особенный момент вместе с вами.'}
                 </p>
                 <button
                   className={styles.startBtn}
                   onClick={() => setLoginStep('form')}
                 >
-                  Начать
+                  {isChangingName ? 'Продолжить' : 'Начать'}
                 </button>
               </div>
             )}
@@ -740,10 +817,12 @@ export default function Home() {
             {loginStep === 'form' && (
               <div className={styles.glassCard}>
                 <h2 className={`${styles.glassCardTitle} handwritten`}>
-                  Как вас зовут?
+                  {isChangingName ? 'Сменить имя' : 'Как вас зовут?'}
                 </h2>
                 <p className={styles.glassCardText}>
-                  Введите своё имя и фамилию, чтобы делиться моментами в общей галерее.
+                  {isChangingName
+                    ? 'Введите новое имя и фамилию. Подписи у ваших фотографий обновятся автоматически.'
+                    : 'Введите своё имя и фамилию, чтобы делиться моментами в общей галерее.'}
                 </p>
                 <form onSubmit={handleRegister} className={styles.glassForm}>
                   <input
@@ -763,7 +842,7 @@ export default function Home() {
                     className={styles.glassInput}
                   />
                   <button type="submit" className={styles.startBtn}>
-                    Войти
+                    {isChangingName ? 'Сохранить' : 'Войти'}
                   </button>
                 </form>
               </div>
