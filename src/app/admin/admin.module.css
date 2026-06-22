@@ -334,15 +334,17 @@
 
 @keyframes sweepIn {
   0% {
-    transform: scale(0.2) rotate(-20deg) translateY(500px);
+    transform: scale(0.6) translateY(60px);
     opacity: 0;
+    filter: blur(12px);
   }
-  50% {
-    transform: scale(1.1) rotate(5deg) translateY(-20px);
+  30% {
+    transform: scale(1.04) translateY(-8px);
     opacity: 1;
+    filter: blur(0);
   }
   100% {
-    transform: scale(1) rotate(0deg) translateY(0);
+    transform: scale(1) translateY(0);
     opacity: 1;
   }
 }
@@ -379,13 +381,13 @@
 /* Row of completed collages */
 .collagesRow {
   position: absolute;
-  bottom: 20px;
+  top: 100px;
   left: 5%;
   width: 90%;
   display: flex;
   gap: 20px;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
   max-height: 220px;
   overflow: hidden;
@@ -403,18 +405,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  animation: landInRow 0.6s ease forwards;
+  animation: landInRow 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
   transition: all 0.4s ease;
 }
 
 @keyframes landInRow {
   from {
-    transform: scale(1.6) translateY(-100px);
+    transform: scale(3.5) translateY(120px);
     opacity: 0;
+    filter: blur(10px);
   }
   to {
     transform: scale(1) translateY(0);
     opacity: 1;
+    filter: blur(0);
   }
 }
 
@@ -443,15 +447,33 @@
 
 /* Scrambling State */
 .scramble {
-  animation: shakeScramble 0.3s ease infinite alternate;
+  animation: shuffleVortex 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-@keyframes shakeScramble {
+@keyframes shuffleVortex {
   0% {
-    transform: translate(random(20) - 10px, random(20) - 10px) rotate(random(10) - 5deg) scale(0.9);
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+  20% {
+    transform: translate(45px, -45px) rotate(45deg) scale(0.9);
+  }
+  40% {
+    transform: translate(-35px, 55px) rotate(-90deg) scale(1.05);
+  }
+  60% {
+    transform: translate(55px, 35px) rotate(180deg) scale(0.75);
+    filter: blur(2px);
+  }
+  80% {
+    transform: translate(-45px, -55px) rotate(270deg) scale(0.5);
+    opacity: 0.5;
+    filter: blur(5px);
   }
   100% {
-    transform: translate(random(20) - 10px, random(20) - 10px) rotate(random(10) - 5deg) scale(1.1);
+    transform: translate(0, 0) rotate(360deg) scale(0);
+    opacity: 0;
+    filter: blur(10px);
   }
 }
 
