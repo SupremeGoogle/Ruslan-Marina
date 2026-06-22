@@ -54,6 +54,7 @@ export default function AdminPage() {
   const [currentRevealIndex, setCurrentRevealIndex] = useState(0);
   const [revealedGuests, setRevealedGuests] = useState<ParticipantProgress[]>([]);
   const [winner, setWinner] = useState<ParticipantProgress | null>(null);
+  const [manualSelections, setManualSelections] = useState<Record<string, boolean>>({});
 
   const isSupabaseConfigured = !!supabase;
 
@@ -333,11 +334,14 @@ export default function AdminPage() {
 
   // 6. RANDOMIZER ANIMATION LOGIC
   const startRandomizer = () => {
-    // Filter guests who have uploaded at least 1 photo
-    const activeParticipants = participants.filter(p => p.photos.length > 0);
+    // Filter guests who are selected manually or have 5 photos by default, and have at least 1 photo
+    const activeParticipants = participants.filter(p => {
+      const isSelected = manualSelections[p.guestId] ?? (p.photos.length === 5);
+      return isSelected && p.photos.length > 0;
+    });
 
     if (activeParticipants.length === 0) {
-      alert('Нет участников с загруженными фотографиями!');
+      alert('Нет участников для розыгрыша! Отметьте галочку «Участвует» у гостей, чтобы добавить их.');
       return;
     }
 
@@ -373,7 +377,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (animStage !== 'scramble') return;
 
-    // Scramble for 2.5 seconds, then pick winner
+    // Scramble for 6.0 seconds, then pick winner
     const scrambleTimer = setTimeout(() => {
       const randomIndex = Math.floor(Math.random() * eligibleGuests.length);
       const chosenWinner = eligibleGuests[randomIndex];
@@ -383,7 +387,7 @@ export default function AdminPage() {
       
       // Confetti burst logic
       triggerConfettiShow();
-    }, 2500);
+    }, 6000);
 
     return () => clearTimeout(scrambleTimer);
   }, [animStage, eligibleGuests]);
@@ -467,6 +471,17 @@ export default function AdminPage() {
       </div>
     );
   }
+
+  // Helper: Dynamic width and font size based on the number of participating guests
+  const getMiniCollageSize = (count: number) => {
+    if (count <= 4) return { width: 170, fontSize: '0.75rem' };
+    if (count <= 8) return { width: 130, fontSize: '0.65rem' };
+    if (count <= 12) return { width: 100, fontSize: '0.55rem' };
+    return { width: 75, fontSize: '0.45rem' };
+  };
+
+  const count = eligibleGuests.length;
+  const { width: miniWidth, fontSize: miniFontSize } = getMiniCollageSize(count);
 
   // Render Main Admin Panel
   return (
@@ -583,7 +598,22 @@ export default function AdminPage() {
                         <span className={styles.participantName}>{p.firstName} {p.lastName}</span>
                         <span className={styles.participantIp}> (IP: {p.ipAddress})</span>
                       </div>
-                      <span className={styles.participantStats}>Загружено: {p.photos.length} из 5</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span className={styles.participantStats}>Загружено: {p.photos.length} из 5</span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}>
+                          <input 
+                            type="checkbox"
+                            checked={manualSelections[p.guestId] ?? (p.photos.length === 5)}
+                            onChange={(e) => {
+                              setManualSelections(prev => ({
+                                ...prev,
+                                [p.guestId]: e.target.checked
+                              }));
+                            }}
+                          />
+                          Участвует
+                        </label>
+                      </div>
                     </div>
 
                     <div className={styles.participantThumbnails}>
@@ -645,14 +675,20 @@ export default function AdminPage() {
 
             {/* Phase 2: Scrambled grid animation where all collages rotate & fly */}
             {animStage === 'scramble' && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', width: '80%' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', width: '80%', zIndex: 5 }}>
                 {eligibleGuests.map((g, index) => (
-                  <div key={g.guestId} className={`${styles.miniCollage} ${styles.scramble}`} style={{
-                    animationDelay: `${index * 0.05}s`
-                  }}>
-                    <span className={styles.miniCollageName}>{g.firstName} {g.lastName}</span>
+                  <div 
+                    key={g.guestId} 
+                    className={`${styles.miniCollage} ${styles.scramble}`} 
+                    style={{
+                      width: `${miniWidth}px`,
+                      height: `${miniWidth}px`,
+                      animationDelay: `${index * 0.05}s`
+                    }}
+                  >
+                    <span className={styles.miniCollageName} style={{ fontSize: miniFontSize }}>{g.firstName} {g.lastName}</span>
                     <div className={styles.miniGrid}>
-                      {g.photos.slice(0, 3).map(p => (
+                      {g.photos.slice(0, 5).map(p => (
                         <img key={p.id} src={p.url} alt="Мини фото" className={styles.miniImg} />
                       ))}
                     </div>
@@ -684,10 +720,17 @@ export default function AdminPage() {
           {animStage === 'reveal' && (
             <div className={styles.collagesRow}>
               {revealedGuests.map((g) => (
-                <div key={g.guestId} className={styles.miniCollage}>
-                  <span className={styles.miniCollageName}>{g.firstName} {g.lastName}</span>
+                <div 
+                  key={g.guestId} 
+                  className={styles.miniCollage}
+                  style={{
+                    width: `${miniWidth}px`,
+                    height: `${miniWidth}px`
+                  }}
+                >
+                  <span className={styles.miniCollageName} style={{ fontSize: miniFontSize }}>{g.firstName} {g.lastName}</span>
                   <div className={styles.miniGrid}>
-                    {g.photos.slice(0, 3).map(p => (
+                    {g.photos.slice(0, 5).map(p => (
                       <img key={p.id} src={p.url} alt="Мини фото" className={styles.miniImg} />
                     ))}
                   </div>
