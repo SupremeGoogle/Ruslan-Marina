@@ -35,6 +35,7 @@ export default function Home() {
   // Photo State
   const [userPhotos, setUserPhotos] = useState<Photo[]>([]);
   const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
+  const [activeLightboxPhoto, setActiveLightboxPhoto] = useState<Photo | null>(null);
   
   // Upload and Loading States
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
@@ -460,6 +461,24 @@ export default function Home() {
     }
   };
 
+  const downloadPhoto = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Direct download failed, opening in new tab:', err);
+      window.open(url, '_blank');
+    }
+  };
+
   // Helper: format timer digits
   const formatTime = (totalSeconds: number) => {
     const hrs = Math.floor(totalSeconds / 3600);
@@ -575,8 +594,8 @@ export default function Home() {
                   <div 
                     key={i} 
                     className={styles.slotCard}
-                    onClick={() => !photo && handleSlotClick(i)}
-                    style={{ cursor: isUploadDisabled || photo ? 'default' : 'pointer' }}
+                    onClick={() => photo ? setActiveLightboxPhoto(photo) : handleSlotClick(i)}
+                    style={{ cursor: isUploadDisabled && !photo ? 'default' : 'pointer' }}
                   >
                     {uploadingIndex === i ? (
                       <div className={styles.uploadingOverlay}>
@@ -635,7 +654,12 @@ export default function Home() {
           ) : (
             <div className={styles.galleryGrid}>
               {allPhotos.map((photo) => (
-                <div key={photo.id} className={styles.galleryItem}>
+                <div 
+                  key={photo.id} 
+                  className={styles.galleryItem}
+                  onClick={() => setActiveLightboxPhoto(photo)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <img 
                     src={photo.url} 
                     alt={`Фото от ${photo.guest_name}`} 
@@ -697,6 +721,47 @@ export default function Home() {
           Сделано с любовью для Руслана & Марины <span className={styles.footerHeart}>♥</span> 2026
         </footer>
       </div>
+
+      {/* Lightbox Modal */}
+      {activeLightboxPhoto && (
+        <div 
+          className={styles.lightboxOverlay}
+          onClick={() => setActiveLightboxPhoto(null)}
+        >
+          <div 
+            className={styles.lightboxContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className={styles.lightboxCloseBtn}
+              onClick={() => setActiveLightboxPhoto(null)}
+              title="Закрыть"
+            >
+              ✕
+            </button>
+            <img 
+              src={activeLightboxPhoto.url} 
+              alt={`Фото от ${activeLightboxPhoto.guest_name}`} 
+              className={styles.lightboxImage}
+            />
+            <div className={styles.lightboxMeta}>
+              <div className={styles.lightboxAuthor}>
+                Отправитель: <span>{activeLightboxPhoto.guest_name}</span>
+              </div>
+              <button 
+                className={styles.lightboxDownloadBtn}
+                onClick={() => {
+                  const safeName = activeLightboxPhoto.guest_name.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+                  downloadPhoto(activeLightboxPhoto.url, `wedding_${safeName}_${activeLightboxPhoto.id.substring(0, 5)}.jpg`);
+                }}
+                title="Скачать фото"
+              >
+                ⬇️ Скачать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

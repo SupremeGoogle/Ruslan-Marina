@@ -3,20 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --webpack",
-    "start": "next start",
+    "dev": "node scripts/run-env.js next dev",
+    "build": "node scripts/run-env.js next build --webpack",
+    "start": "node scripts/run-env.js next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "canvas-confetti": "^1.9.4",
+    "jszip": "^3.10.1",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
+    "@types/jszip": "^3.4.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -53,7 +53,7 @@ const AdaptiveCollage: React.FC<AdaptiveCollageProps> = ({ photos, title, isWinn
         }));
       };
     });
-  }, [photos, orientations]);
+  }, [photos]);
 
   return (
     <div className={isWinner ? styles.winnerCollageWrapper : styles.sweepingCollage}>
@@ -117,8 +117,81 @@ export default function AdminPage() {
   const [revealedGuests, setRevealedGuests] = useState<ParticipantProgress[]>([]);
   const [winner, setWinner] = useState<ParticipantProgress | null>(null);
   const [manualSelections, setManualSelections] = useState<Record<string, boolean>>({});
+  const [archiveUrl, setArchiveUrl] = useState<string | null>(null);
 
   const isSupabaseConfigured = !!supabase;
+
+  const checkArchiveStatus = React.useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const adminPassword = sessionStorage.getItem('admin_password') || '';
+    try {
+      const res = await fetch('/api/admin/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ action: 'check' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.exists) {
+        setArchiveUrl(data.archiveUrl);
+      } else {
+        setArchiveUrl(null);
+      }
+    } catch (err) {
+      console.error('Error checking archive status:', err);
+    }
+  }, [isSupabaseConfigured]);
+
+  const triggerCreateArchive = React.useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const adminPassword = sessionStorage.getItem('admin_password') || '';
+    try {
+      const res = await fetch('/api/admin/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ action: 'create' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setArchiveUrl(data.archiveUrl);
+      } else {
+        console.error('Failed to create archive:', data.error);
+      }
+    } catch (err) {
+      console.error('Error triggering archive creation:', err);
+    }
+  }, [isSupabaseConfigured]);
+
+  const handleDeleteArchive = React.useCallback(async () => {
+    if (!confirm('Вы действительно хотите удалить архив со всеми фотографиями?')) return;
+    if (!isSupabaseConfigured) return;
+    const adminPassword = sessionStorage.getItem('admin_password') || '';
+    try {
+      const res = await fetch('/api/admin/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ action: 'delete' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setArchiveUrl(null);
+        alert('Архив успешно удален.');
+      } else {
+        alert('Не удалось удалить архив: ' + (data.error || 'unknown error'));
+      }
+    } catch (err) {
+      console.error('Error deleting archive:', err);
+      alert('Ошибка при удалении архива.');
+    }
+  }, [isSupabaseConfigured]);
 
   // 1. Verify Session Authenticated on Mount
   useEffect(() => {
@@ -241,9 +314,10 @@ export default function AdminPage() {
     let pollInterval: NodeJS.Timeout;
     if (isAuthenticated) {
       pollInterval = setInterval(fetchDashboardData, 5000);
+      checkArchiveStatus();
     }
     return () => clearInterval(pollInterval);
-  }, [isAuthenticated, isSupabaseConfigured]);
+  }, [isAuthenticated, isSupabaseConfigured, checkArchiveStatus]);
 
   // Local 1-second countdown ticking
   useEffect(() => {
@@ -407,6 +481,9 @@ export default function AdminPage() {
       return;
     }
 
+    // Trigger archive creation/refresh in background when starting randomizer
+    triggerCreateArchive();
+
     setEligibleGuests(activeParticipants);
     setRevealedGuests([]);
     setWinner(null);
@@ -545,6 +622,11 @@ export default function AdminPage() {
   const count = eligibleGuests.length;
   const { width: miniWidth, fontSize: miniFontSize } = getMiniCollageSize(count);
 
+  // Calculate active (checked) participants count
+  const activeCount = participants.filter(
+    (p) => manualSelections[p.guestId] ?? (p.photos.length === 5)
+  ).length;
+
   // Render Main Admin Panel
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
@@ -632,15 +714,72 @@ export default function AdminPage() {
               <button onClick={startRandomizer} className={styles.btnRandomizer}>
                 🎉 Запустить Рандомайзер
               </button>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4 }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4, marginBottom: '16px' }}>
                 Случайный выбор победителя среди гостей, загрузивших фотографии. Анимация проигрывает коллажи участников по очереди.
               </p>
+
+              {/* Archive management section */}
+              <div style={{ borderTop: '1px dashed rgba(181, 141, 114, 0.2)', paddingTop: '16px', marginTop: '16px', width: '100%' }}>
+                <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)', textAlign: 'center', fontWeight: 600 }}>Архив с фотографиями</h4>
+                {archiveUrl ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                    <a 
+                      href={archiveUrl} 
+                      download="all_wedding_photos.zip"
+                      className="btn-primary"
+                      style={{ 
+                        fontSize: '0.85rem', 
+                        padding: '8px 16px', 
+                        textDecoration: 'none', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        backgroundColor: 'var(--color-primary)',
+                        color: 'white',
+                        borderRadius: 'var(--radius-full)',
+                        fontWeight: 500,
+                        border: 'none',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      ⬇️ Скачать архив (.zip)
+                    </a>
+                    <button 
+                      onClick={handleDeleteArchive}
+                      className="btn-secondary"
+                      style={{ 
+                        fontSize: '0.8rem', 
+                        padding: '6px 12px', 
+                        color: '#d9383a', 
+                        borderColor: 'rgba(217, 56, 58, 0.3)',
+                        backgroundColor: 'transparent',
+                        borderRadius: 'var(--radius-full)'
+                      }}
+                    >
+                      🗑️ Удалить архив
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
+                      Архив создается автоматически при запуске рандомайзера.
+                    </p>
+                    <button 
+                      onClick={triggerCreateArchive}
+                      className="btn-secondary"
+                      style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 'var(--radius-full)' }}
+                    >
+                      📦 Создать архив сейчас
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Right Column: Participants Progress Table */}
           <div className={`${styles.participantsCard} glass-panel`}>
-            <h2 className={styles.cardTitle}>Прогресс гостей ({participants.length} зарегистрировано)</h2>
+            <h2 className={styles.cardTitle}>Прогресс гостей ({activeCount} активных / {participants.length} зарегистрировано)</h2>
 
             {loading ? (
               <div style={{ textAlign: 'center', padding: '40px' }}>
