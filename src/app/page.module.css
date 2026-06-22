@@ -720,12 +720,12 @@
   }
 
   .galleryGrid {
-    column-count: 2;
-    column-gap: 10px;
+    column-count: 3;
+    column-gap: 8px;
   }
 
   .galleryItem {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     border-radius: 6px;
   }
 
@@ -734,15 +734,21 @@
   }
 
   .galleryInfo {
-    padding: 6px 10px;
+    padding: 5px 7px;
+    gap: 4px;
   }
 
   .galleryAuthor {
-    font-size: 0.78rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.68rem;
   }
 
   .galleryTime {
-    font-size: 0.68rem;
+    flex-shrink: 0;
+    font-size: 0.58rem;
   }
 
   .emptyGallery {
