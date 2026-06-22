@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Alex_Brush, Cormorant_Garamond, Nunito } from "next/font/google";
+import { Marck_Script, Cormorant_Garamond, Nunito } from "next/font/google";
 import "./globals.css";
 
-// ✍️ Alex Brush — элегантный каллиграфический скрипт (как на diana-viktor.vercel.app)
-const alexBrush = Alex_Brush({
+// ✍️ Marck Script — каллиграфический с полной поддержкой кириллицы
+const marckScript = Marck_Script({
   weight: "400",
   variable: "--font-handwriting",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
   display: "swap",
 });
 
@@ -47,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${alexBrush.variable} ${cormorantGaramond.variable} ${nunito.variable}`}
+      className={`${marckScript.variable} ${cormorantGaramond.variable} ${nunito.variable}`}
     >
       <body>{children}</body>
     </html>

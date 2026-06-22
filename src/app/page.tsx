@@ -726,8 +726,7 @@ export default function Home() {
                   Руслан&nbsp;&amp;&nbsp;Марина
                 </h2>
                 <p className={styles.glassCardText}>
-                  Добро пожаловать на наш свадебный день!<br />
-                  Мы рады разделить этот особенный момент вместе с вами.
+                  Добро пожаловать на наш свадебный день! Мы рады разделить этот особенный момент вместе с вами.
                 </p>
                 <button
                   className={styles.startBtn}
@@ -746,8 +745,7 @@ export default function Home() {
                   Как вас зовут?
                 </h2>
                 <p className={styles.glassCardText}>
-                  Введите своё имя и фамилию, чтобы<br />
-                  делиться моментами в общей галерее.
+                  Введите своё имя и фамилию, чтобы делиться моментами в общей галерее.
                 </p>
                 <form onSubmit={handleRegister} className={styles.glassForm}>
                   <input

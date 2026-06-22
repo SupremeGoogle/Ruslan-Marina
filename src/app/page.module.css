@@ -449,7 +449,7 @@
 .glassCard {
   position: relative;
   z-index: 2;
-  width: min(420px, 90vw);
+  width: min(480px, 92vw);
   padding: 48px 40px 44px;
   text-align: center;
   /* Glass effect */
@@ -482,7 +482,7 @@
 /* Title uses Alex Brush (--font-handwriting) */
 .glassCardTitle {
   font-family: var(--font-handwriting) !important;
-  font-size: clamp(2.8rem, 9vw, 4.2rem);
+  font-size: clamp(2.2rem, 6.5vw, 3.2rem);
   font-weight: 400;
   line-height: 1.05;
   color: #fff;
