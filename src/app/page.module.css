@@ -1043,17 +1043,17 @@
   }
 
   .glassCard {
-    /* 10% smaller + shifted 30% down on mobile */
+    /* 10% smaller + shifted 10% down on mobile */
     width: min(432px, 83vw);  /* 92vw * 0.9 = 82.8vw ≈ 83vw */
     padding: 32px 20px 28px;
-    transform: translateY(30vh) scale(0.9);
+    transform: translateY(10vh) scale(0.9);
     transform-origin: center top;
     animation-name: mobileCardIn;
   }
 
   @keyframes mobileCardIn {
-    from { opacity: 0; transform: translateY(34vh) scale(0.87); }
-    to   { opacity: 1; transform: translateY(30vh) scale(0.9); }
+    from { opacity: 0; transform: translateY(14vh) scale(0.87); }
+    to   { opacity: 1; transform: translateY(10vh) scale(0.9); }
   }
   .glassCardTitle {
     font-size: 2.4rem;
