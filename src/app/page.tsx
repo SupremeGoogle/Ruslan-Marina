@@ -721,7 +721,6 @@ export default function Home() {
             {/* ── Welcome card ── */}
             {loginStep === 'welcome' && (
               <div className={styles.glassCard}>
-                <div className={styles.glassCardDecor} aria-hidden="true">✦</div>
                 <h2 className={`${styles.glassCardTitle} handwritten`}>
                   Руслан&nbsp;&amp;&nbsp;Марина
                 </h2>
@@ -740,7 +739,6 @@ export default function Home() {
             {/* ── Name form card ── */}
             {loginStep === 'form' && (
               <div className={styles.glassCard}>
-                <div className={styles.glassCardDecor} aria-hidden="true">✦</div>
                 <h2 className={`${styles.glassCardTitle} handwritten`}>
                   Как вас зовут?
                 </h2>
