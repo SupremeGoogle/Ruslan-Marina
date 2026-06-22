@@ -544,9 +544,6 @@ export default function Home() {
             <div className={styles.userName}>
               Приветствуем, <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{guest.firstName} {guest.lastName}</span>!
             </div>
-            <button onClick={handleLogout} className={styles.changeUserBtn}>
-              Сменить гостя
-            </button>
           </div>
         )}
 
