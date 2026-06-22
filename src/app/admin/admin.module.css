@@ -235,6 +235,17 @@
   border: 1px solid rgba(0,0,0,0.05);
 }
 
+.emptyThumbnailPlaceholder {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  background-color: #eee9e3;
+  border: 1px dashed #d0c8be;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .thumbnail {
   width: 100%;
   height: 100%;

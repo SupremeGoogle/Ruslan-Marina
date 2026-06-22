@@ -587,10 +587,9 @@ export default function AdminPage() {
                     </div>
 
                     <div className={styles.participantThumbnails}>
-                      {p.photos.length === 0 ? (
-                        <span className={styles.noPhotosText}>Нет фотографий</span>
-                      ) : (
-                        p.photos.map((photo) => (
+                      {Array.from({ length: 5 }).map((_, idx) => {
+                        const photo = p.photos[idx];
+                        return photo ? (
                           <div key={photo.id} className={styles.thumbnailWrapper}>
                             <img src={photo.url} alt="Миниатюра" className={styles.thumbnail} />
                             <button
@@ -601,8 +600,10 @@ export default function AdminPage() {
                               ✕
                             </button>
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          <div key={`empty-${idx}`} className={styles.emptyThumbnailPlaceholder} title="Свободная ячейка"></div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
