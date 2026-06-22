@@ -410,23 +410,163 @@
   border: 1px dashed rgba(181, 141, 114, 0.2);
 }
 
-/* Modal Overlay Styles */
+/* Modal Overlay — transparent, video shows through */
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(30,20,20,0.88) 0%, rgba(60,35,35,0.85) 100%);
-  backdrop-filter: blur(6px);
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
-  animation: fadeIn 0.4s ease forwards;
   overflow: hidden;
+  animation: fadeIn 0.5s ease forwards;
 }
 
+/* Fullscreen background video */
+.fullscreenVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Dark scrim for readability */
+.videoScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(10, 5, 5, 0.55) 0%,
+    rgba(30, 15, 15, 0.45) 50%,
+    rgba(10, 5, 5, 0.6) 100%
+  );
+  z-index: 1;
+}
+
+/* ── Glassmorphism card ── */
+.glassCard {
+  position: relative;
+  z-index: 2;
+  width: min(420px, 90vw);
+  padding: 48px 40px 44px;
+  text-align: center;
+  /* Glass effect */
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  animation: cardIn 0.7s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Decorative star/diamond */
+.glassCardDecor {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.5em;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Title uses Alex Brush (--font-handwriting) */
+.glassCardTitle {
+  font-family: var(--font-handwriting) !important;
+  font-size: clamp(2.8rem, 9vw, 4.2rem);
+  font-weight: 400;
+  line-height: 1.05;
+  color: #fff;
+  margin: 0 0 20px;
+  /* Subtle warm glow */
+  text-shadow:
+    0 0 40px rgba(212, 175, 55, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  /* Override gradient from .handwritten global class */
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #fff !important;
+  background-clip: unset !important;
+  filter: none !important;
+}
+
+/* Subtitle text */
+.glassCardText {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.80);
+  margin: 0 0 32px;
+}
+
+/* Start / Submit button */
+.startBtn {
+  display: inline-block;
+  width: 100%;
+  padding: 14px 32px;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.startBtn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.startBtn:active {
+  transform: translateY(0);
+}
+
+/* ── Glass form inputs ── */
+.glassForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.glassInput {
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+.glassInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+.glassInput:focus {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+/* Keep old modalContent / modalTitle for any other uses */
 .modalContent {
   width: 90%;
   max-width: 460px;
@@ -434,33 +574,25 @@
   text-align: center;
   animation: scaleIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
-
 .modalTitle {
   font-family: var(--font-handwriting);
   font-size: clamp(2.4rem, 7vw, 3.4rem);
-  background: linear-gradient(135deg, #c8925a 0%, #d4af37 50%, #b58d72 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 1px 3px rgba(181,141,114,0.2));
+  color: var(--color-primary);
   margin-bottom: 10px;
   line-height: 1.1;
 }
-
 .modalText {
   font-size: 0.95rem;
   color: var(--text-muted);
   margin-bottom: 24px;
   line-height: 1.5;
 }
-
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 16px;
   margin-bottom: 24px;
 }
-
 .inputField {
   width: 100%;
   padding: 14px 20px;
@@ -473,16 +605,15 @@
   outline: none;
   transition: var(--transition-fast);
 }
-
 .inputField:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(181, 141, 114, 0.15);
   background: #fff;
 }
-
 .inputField::placeholder {
   color: #b0aba4;
 }
+
 
 /* Footer Section */
 .footer {
@@ -881,110 +1012,23 @@
   margin: 0 0 36px;
 }
 
-.startBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 44px;
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 8px 30px rgba(var(--color-primary-rgb, 180,120,100), 0.45);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.startBtn:hover {
-  transform: translateY(-3px) scale(1.04);
-  box-shadow: 0 14px 40px rgba(var(--color-primary-rgb, 180,120,100), 0.55);
-}
-.startBtnIcon {
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
 
-/* ── Step 2: Video fullscreen ── */
-.videoStep {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-}
 
-.fullscreenVideo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
-/* Progress bar */
-.videoProgressBar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: rgba(255,255,255,0.25);
-  z-index: 10;
-}
-.videoProgressFill {
-  height: 100%;
-  width: 0;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
-  animation: videoProgress linear forwards;
-  animation-duration: 7s; /* overridden by inline style */
-}
-@keyframes videoProgress {
-  from { width: 0%; }
-  to   { width: 100%; }
-}
-
-/* Skip button */
-.videoSkipBtn {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  z-index: 20;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(8px);
-  color: rgba(255,255,255,0.9);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: var(--radius-full);
-  padding: 8px 20px;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
-}
-.videoSkipBtn:hover {
-  background: rgba(0,0,0,0.65);
-  transform: scale(1.05);
-}
-
-/* ── Mobile overrides for login flow ── */
+/* ── Mobile overrides for glassmorphism card ── */
 @media (max-width: 480px) {
-  .welcomeStep {
-    padding: 36px 20px;
+  .glassCard {
+    padding: 36px 24px 32px;
   }
-  .welcomeStepTitle {
-    font-size: 2.4rem;
+  .glassCardTitle {
+    font-size: 2.8rem;
+  }
+  .glassCardText {
+    font-size: 0.88rem;
+    margin-bottom: 24px;
   }
   .startBtn {
-    padding: 14px 32px;
-    font-size: 1rem;
-  }
-  .videoSkipBtn {
-    bottom: 16px;
-    right: 16px;
-    font-size: 0.82rem;
-    padding: 7px 16px;
+    padding: 12px 28px;
+    font-size: 0.9rem;
   }
 }
-

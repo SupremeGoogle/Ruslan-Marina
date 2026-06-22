@@ -699,94 +699,75 @@ export default function Home() {
           )}
         </section>
 
-        {/* Guest Registration/Welcome Dialog (Modal) — 3-step flow */}
+        {/* Guest Registration / Welcome Dialog */}
         {showLoginModal && (
           <div className={styles.modalOverlay}>
 
-            {/* ── STEP 1: Welcome greeting ── */}
+            {/* Video always plays in background */}
+            <video
+              ref={videoRef}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className={styles.fullscreenVideo}
+            >
+              <source src="/wedding_video.mp4" type="video/mp4" />
+            </video>
+
+            {/* Dark scrim over video */}
+            <div className={styles.videoScrim} />
+
+            {/* ── Welcome card ── */}
             {loginStep === 'welcome' && (
-              <div className={styles.welcomeStep}>
-                {/* Decorative hearts */}
-                <div className={styles.welcomeHearts} aria-hidden="true">
-                  <span>♥</span><span>♥</span><span>♥</span>
-                </div>
-                <h2 className={`${styles.welcomeStepTitle} handwritten`}>
+              <div className={styles.glassCard}>
+                <div className={styles.glassCardDecor} aria-hidden="true">✦</div>
+                <h2 className={`${styles.glassCardTitle} handwritten`}>
                   Руслан&nbsp;&amp;&nbsp;Марина
                 </h2>
-                <p className={styles.welcomeStepDate}>22 июня 2026</p>
-                <p className={styles.welcomeStepText}>
+                <p className={styles.glassCardText}>
                   Добро пожаловать на наш свадебный день!<br />
                   Мы рады разделить этот особенный момент вместе с вами.
                 </p>
                 <button
-                  className={`${styles.startBtn} btn-primary`}
-                  onClick={handleStartVideo}
+                  className={styles.startBtn}
+                  onClick={() => setLoginStep('form')}
                 >
-                  <span className={styles.startBtnIcon}>▶</span>
                   Начать
                 </button>
               </div>
             )}
 
-            {/* ── STEP 2: Video playback (7 seconds) ── */}
-            {loginStep === 'video' && (
-              <div className={styles.videoStep}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  onEnded={() => setLoginStep('form')}
-                  className={styles.fullscreenVideo}
-                >
-                  <source src="/wedding_video.mp4" type="video/mp4" />
-                </video>
-                {/* Progress bar showing 7 seconds */}
-                <div className={styles.videoProgressBar}>
-                  <div className={styles.videoProgressFill} style={{ animationDuration: '7s' }} />
-                </div>
-                {/* Skip button */}
-                <button
-                  className={styles.videoSkipBtn}
-                  onClick={() => {
-                    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
-                    setLoginStep('form');
-                  }}
-                >
-                  Пропустить ›
-                </button>
-              </div>
-            )}
-
-            {/* ── STEP 3: Name / surname form ── */}
+            {/* ── Name form card ── */}
             {loginStep === 'form' && (
-              <div className={`${styles.modalContent} glass-panel`}>
-                <h2 className={`${styles.modalTitle} handwritten`}>Как вас зовут?</h2>
-                <p className={styles.modalText}>
-                  Введите своё имя и фамилию, чтобы делиться<br />
-                  счастливыми моментами в общей галерее.
+              <div className={styles.glassCard}>
+                <div className={styles.glassCardDecor} aria-hidden="true">✦</div>
+                <h2 className={`${styles.glassCardTitle} handwritten`}>
+                  Как вас зовут?
+                </h2>
+                <p className={styles.glassCardText}>
+                  Введите своё имя и фамилию, чтобы<br />
+                  делиться моментами в общей галерее.
                 </p>
-                <form onSubmit={handleRegister}>
-                  <div className={styles.formGroup}>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ваше Имя"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className={styles.inputField}
-                    />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ваша Фамилия"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className={styles.inputField}
-                    />
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ width: '100%' }}>
-                    Войти на сайт
+                <form onSubmit={handleRegister} className={styles.glassForm}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ваше Имя"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className={styles.glassInput}
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ваша Фамилия"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className={styles.glassInput}
+                  />
+                  <button type="submit" className={styles.startBtn}>
+                    Войти
                   </button>
                 </form>
               </div>

@@ -1,16 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Great_Vibes, Cormorant_Garamond, Nunito } from "next/font/google";
+import { Alex_Brush, Cormorant_Garamond, Nunito } from "next/font/google";
 import "./globals.css";
 
-// 🌹 Great Vibes — роскошный каллиграфический скрипт для заголовков и имён
-const greatVibes = Great_Vibes({
+// ✍️ Alex Brush — элегантный каллиграфический скрипт (как на diana-viktor.vercel.app)
+const alexBrush = Alex_Brush({
   weight: "400",
   variable: "--font-handwriting",
   subsets: ["latin"],
   display: "swap",
 });
 
-// 📖 Cormorant Garamond — элегантный серифный для подзаголовков
+// 📖 Cormorant Garamond — изысканный серифный для заголовков
 const cormorantGaramond = Cormorant_Garamond({
   weight: ["300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
@@ -19,7 +19,7 @@ const cormorantGaramond = Cormorant_Garamond({
   display: "swap",
 });
 
-// ✍️ Nunito — мягкий, читаемый sans-serif для основного текста
+// 🔤 Nunito — мягкий читаемый для основного текста
 const nunito = Nunito({
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
@@ -47,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${greatVibes.variable} ${cormorantGaramond.variable} ${nunito.variable}`}
+      className={`${alexBrush.variable} ${cormorantGaramond.variable} ${nunito.variable}`}
     >
       <body>{children}</body>
     </html>
