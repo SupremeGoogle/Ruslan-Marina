@@ -239,6 +239,42 @@ h1, h2, h3, h4, h5, h6 {
   animation: fall 10s linear infinite;
 }
 
+/* Mobile-friendly base */
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 12px 22px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+
+  .btn-danger {
+    padding: 8px 14px;
+    min-height: 36px;
+  }
+
+  .title-main {
+    font-size: 2.2rem;
+  }
+
+  .title-sub {
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-danger:hover {
+    transform: none;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

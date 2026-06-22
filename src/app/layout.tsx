@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Marck_Script, Cormorant_Garamond, Montserrat } from "next/font/google";
 import "./globals.css";
 
@@ -27,6 +27,13 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Руслан & Марина — Свадебная Галерея",
   description: "Запечатлевая счастливые моменты нашей любви. Делитесь фотографиями в реальном времени!",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#fbf9f6",
 };
 
 export default function RootLayout({

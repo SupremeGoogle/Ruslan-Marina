@@ -482,3 +482,164 @@
   50% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
+
+/* ===== Mobile responsiveness ===== */
+@media (max-width: 768px) {
+  .container {
+    padding: 24px 14px;
+    gap: 28px;
+  }
+
+  .weddingTitle {
+    font-size: 2.4rem;
+  }
+
+  .namesSubtitle {
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+  }
+
+  .timerContainer {
+    padding: 16px 18px;
+    min-width: 0;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .timerDigits {
+    font-size: 1.7rem;
+    gap: 6px;
+  }
+
+  .digitBox {
+    min-width: 44px;
+  }
+
+  .digitLabel {
+    font-size: 0.55rem;
+  }
+
+  .welcomeUserBar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+
+  .userName {
+    font-size: 1rem;
+  }
+
+  .uploadSection,
+  .gallerySection {
+    padding: 20px 16px;
+  }
+
+  .sectionTitle {
+    font-size: 1.4rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 0.85rem;
+  }
+
+  .gridSlots {
+    gap: 10px;
+  }
+
+  .slotEmptyIcon {
+    font-size: 1.5rem;
+  }
+
+  .slotEmptyText {
+    font-size: 0.7rem;
+    padding: 0 6px;
+  }
+
+  .slotDeleteBtn {
+    width: 32px;
+    height: 32px;
+    top: 6px;
+    right: 6px;
+    font-size: 1rem;
+  }
+
+  .galleryGrid {
+    column-gap: 12px;
+  }
+
+  .galleryItem {
+    margin-bottom: 12px;
+  }
+
+  .galleryInfo {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .galleryAuthor {
+    font-size: 0.85rem;
+  }
+
+  .emptyGallery {
+    padding: 40px 16px;
+    font-size: 1rem;
+  }
+
+  .modalContent {
+    padding: 28px 22px;
+    width: 92%;
+  }
+
+  .modalTitle {
+    font-size: 2.2rem;
+  }
+
+  .modalText {
+    font-size: 0.88rem;
+  }
+
+  .inputField {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+
+  .footer {
+    padding: 28px 14px;
+    margin-top: 16px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .weddingTitle {
+    font-size: 2rem;
+  }
+
+  .timerDigits {
+    font-size: 1.45rem;
+    gap: 4px;
+  }
+
+  .digitBox {
+    min-width: 38px;
+  }
+
+  .separator {
+    font-size: 1.2rem;
+  }
+}
+
+/* Larger tap targets on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .slotCard:hover {
+    transform: none;
+  }
+  .galleryItem:hover {
+    transform: none;
+  }
+  .galleryItem:hover .galleryImage {
+    transform: none;
+  }
+}
