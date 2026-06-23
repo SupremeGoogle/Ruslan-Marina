@@ -20,8 +20,27 @@ if (fs.existsSync(envPath)) {
   });
 }
 
+// Derive Supabase storage host from the env var so Next/Image can optimize
+// remote images from the user's project regardless of which one is configured.
+const supabaseHost = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).hostname : null;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      // Fallback wildcard for any Supabase Storage public URL on *.supabase.co
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      ...(supabaseHost
+        ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
+        : []),
+    ],
+  },
 };
 
 export default nextConfig;

@@ -354,12 +354,20 @@
 .galleryItem {
   break-inside: avoid;
   margin-bottom: 20px;
-  background: white;
+  background:
+    linear-gradient(110deg, #f1e8dd 8%, #faf4ec 18%, #f1e8dd 33%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s linear infinite;
   border-radius: var(--radius-sm);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(181, 141, 114, 0.1);
   transition: var(--transition-smooth);
+}
+
+@keyframes skeletonShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 .galleryItem:hover {

@@ -877,18 +877,22 @@ export default function Home() {
             </div>
           ) : (
             <div className={styles.galleryGrid}>
-              {allPhotos.map((photo) => (
-                <div 
-                  key={photo.id} 
+              {allPhotos.map((photo, idx) => (
+                <div
+                  key={photo.id}
                   className={styles.galleryItem}
                   onClick={() => setActiveLightboxPhoto(photo)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <img 
-                    src={photo.url} 
-                    alt={`Фото от ${photo.guest_name}`} 
+                  <Image
+                    src={photo.url}
+                    alt={`Фото от ${photo.guest_name}`}
                     className={styles.galleryImage}
-                    loading="lazy"
+                    width={600}
+                    height={800}
+                    sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    loading={idx < 4 ? 'eager' : 'lazy'}
+                    priority={idx < 2}
                   />
                   <div className={styles.galleryInfo}>
                     <span className={styles.galleryAuthor}>{photo.guest_name}</span>
