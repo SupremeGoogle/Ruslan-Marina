@@ -481,6 +481,47 @@ export default function AdminPage() {
     }
   };
 
+  // 6. Delete Guest Action (from database & storage)
+  const handleDeleteGuest = async (guestId: string, fullName: string) => {
+    if (!confirm(`Вы действительно хотите удалить гостя ${fullName} и все его фотографии?`)) return;
+
+    if (!isSupabaseConfigured) {
+      // Mock Delete guest
+      const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
+      const mockGuests = JSON.parse(mockGuestsStr) as Guest[];
+      const filteredGuests = mockGuests.filter((g) => g.id !== guestId);
+      localStorage.setItem('mock_guests', JSON.stringify(filteredGuests));
+
+      const mockPhotosStr = localStorage.getItem('mock_photos') || '[]';
+      const mockPhotos = JSON.parse(mockPhotosStr) as Photo[];
+      const filteredPhotos = mockPhotos.filter((p) => p.guest_id !== guestId);
+      localStorage.setItem('mock_photos', JSON.stringify(filteredPhotos));
+
+      fetchDashboardData();
+      return;
+    }
+
+    const adminPassword = sessionStorage.getItem('admin_password') || '';
+
+    try {
+      const res = await fetch('/api/admin/delete-guest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ guestId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to delete guest');
+      
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Delete guest failed:', err);
+      alert('Не удалось удалить гостя.');
+    }
+  };
+
   // 6. RANDOMIZER ANIMATION LOGIC
   const startRandomizer = () => {
     // Filter guests who are selected manually or have 5 photos by default, and have at least 1 photo
@@ -808,9 +849,36 @@ export default function AdminPage() {
                 {participants.map((p) => (
                   <div key={p.guestId} className={styles.participantItem}>
                     <div className={styles.participantHeader}>
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span className={styles.participantName}>{p.firstName} {p.lastName}</span>
                         <span className={styles.participantIp}> (IP: {p.ipAddress})</span>
+                        <button 
+                          onClick={() => handleDeleteGuest(p.guestId, `${p.firstName} ${p.lastName}`)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#d9383a',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            padding: '4px 6px',
+                            borderRadius: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            opacity: 0.6,
+                            transition: 'opacity 0.2s, background-color 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.backgroundColor = 'rgba(217, 56, 58, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '0.6';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          title="Удалить этого гостя и все его фотографии"
+                        >
+                          🗑️
+                        </button>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <span className={styles.participantStats}>Загружено: {p.photos.length} из 5</span>
