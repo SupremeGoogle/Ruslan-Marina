@@ -75,7 +75,29 @@ export default function Home() {
       const cached = localStorage.getItem('wedding_guest_session');
       if (cached) {
         const parsedGuest = JSON.parse(cached) as Guest;
-        setGuest(parsedGuest);
+        if (isSupabaseConfigured) {
+          try {
+            const { data, error } = await supabase
+              .from('guests')
+              .select('*')
+              .eq('id', parsedGuest.id)
+              .single();
+              
+            if (error || !data) {
+              console.warn('Cached guest session not found in DB, clearing cache');
+              localStorage.removeItem('wedding_guest_session');
+              setGuest(null);
+              setShowLoginModal(true);
+            } else {
+              setGuest(parsedGuest);
+            }
+          } catch (err) {
+            console.error('Error verifying guest session:', err);
+            setGuest(parsedGuest); // fallback to cached on network error
+          }
+        } else {
+          setGuest(parsedGuest);
+        }
       } else {
         setShowLoginModal(true);
       }
