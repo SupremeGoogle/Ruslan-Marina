@@ -82,6 +82,8 @@ export default function Home() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isChangingName, setIsChangingName] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   
   // Timer State
   const [timerStatus, setTimerStatus] = useState<'running' | 'paused' | 'reset'>('reset');
@@ -297,7 +299,20 @@ export default function Home() {
   // 4. Handle Guest Registration (Welcome dialog submission)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) return;
+    if (isSubmitting) return;
+    if (!firstName.trim() || !lastName.trim()) {
+      setSubmitError('Пожалуйста, введите имя и фамилию.');
+      return;
+    }
+
+    setSubmitError('');
+    setIsSubmitting(true);
+
+    // Safety: never let the button stay disabled forever
+    const safetyTimeout = setTimeout(() => {
+      setIsSubmitting(false);
+      setSubmitError('Сервер не отвечает. Проверьте интернет и попробуйте ещё раз.');
+    }, 15000);
 
     const cleanFirst = firstName.trim();
     const cleanLast = lastName.trim();
@@ -307,63 +322,143 @@ export default function Home() {
       ip: clientIp,
     };
 
-    if (isChangingName && guest) {
+    try {
+      if (isChangingName && guest) {
+        if (!isSupabaseConfigured) {
+          const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
+          const mockGuests = JSON.parse(mockGuestsStr);
+          const updatedGuests = mockGuests.map((g: any) =>
+            g.id === guest.id
+              ? { ...g, first_name: cleanFirst, last_name: cleanLast, ip_address: clientIp }
+              : g
+          );
+          localStorage.setItem('mock_guests', JSON.stringify(updatedGuests));
+
+          const mockPhotosStr = localStorage.getItem('mock_photos') || '[]';
+          const mockPhotos = JSON.parse(mockPhotosStr) as Photo[];
+          const updatedPhotos = mockPhotos.map((photo) =>
+            photo.guest_id === guest.id
+              ? { ...photo, guest_name: `${cleanFirst} ${cleanLast}` }
+              : photo
+          );
+          localStorage.setItem('mock_photos', JSON.stringify(updatedPhotos));
+
+          const sessionGuest: Guest = {
+            id: guest.id,
+            firstName: cleanFirst,
+            lastName: cleanLast,
+            ip: clientIp,
+          };
+
+          localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
+          setGuest(sessionGuest);
+          setShowLoginModal(false);
+          setIsChangingName(false);
+          fetchPhotos();
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/guest/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guestId: guest.id,
+              firstName: cleanFirst,
+              lastName: cleanLast,
+              ip: clientIp,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Rename failed');
+          }
+
+          const sessionGuest: Guest = {
+            id: guest.id,
+            firstName: cleanFirst,
+            lastName: cleanLast,
+            ip: clientIp,
+          };
+
+          localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
+          setGuest(sessionGuest);
+          setShowLoginModal(false);
+          setIsChangingName(false);
+          fetchPhotos();
+        } catch (err) {
+          console.error('Name change failed:', err);
+          setSubmitError('Не удалось изменить имя. Возможно, такой гость уже существует.');
+        }
+        return;
+      }
+
       if (!isSupabaseConfigured) {
+        // Mock register guest
         const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
         const mockGuests = JSON.parse(mockGuestsStr);
-        const updatedGuests = mockGuests.map((g: any) =>
-          g.id === guest.id
-            ? { ...g, first_name: cleanFirst, last_name: cleanLast, ip_address: clientIp }
-            : g
+        let existing = mockGuests.find(
+          (g: any) => g.first_name === cleanFirst && g.last_name === cleanLast
         );
-        localStorage.setItem('mock_guests', JSON.stringify(updatedGuests));
 
-        const mockPhotosStr = localStorage.getItem('mock_photos') || '[]';
-        const mockPhotos = JSON.parse(mockPhotosStr) as Photo[];
-        const updatedPhotos = mockPhotos.map((photo) =>
-          photo.guest_id === guest.id
-            ? { ...photo, guest_name: `${cleanFirst} ${cleanLast}` }
-            : photo
-        );
-        localStorage.setItem('mock_photos', JSON.stringify(updatedPhotos));
+        if (!existing) {
+          existing = {
+            id: Math.random().toString(36).substring(2, 15),
+            first_name: cleanFirst,
+            last_name: cleanLast,
+            ip_address: clientIp,
+            created_at: new Date().toISOString(),
+          };
+          mockGuests.push(existing);
+          localStorage.setItem('mock_guests', JSON.stringify(mockGuests));
+        }
 
         const sessionGuest: Guest = {
-          id: guest.id,
-          firstName: cleanFirst,
-          lastName: cleanLast,
-          ip: clientIp,
+          id: existing.id,
+          firstName: existing.first_name,
+          lastName: existing.last_name,
+          ip: existing.ip_address,
         };
 
         localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
         setGuest(sessionGuest);
         setShowLoginModal(false);
         setIsChangingName(false);
-        fetchPhotos();
         return;
       }
 
       try {
-        const res = await fetch('/api/guest/rename', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            guestId: guest.id,
-            firstName: cleanFirst,
-            lastName: cleanLast,
-            ip: clientIp,
-          }),
-        });
+        const { data: existing, error: findError } = await supabase
+          .from('guests')
+          .select('*')
+          .eq('first_name', cleanFirst)
+          .eq('last_name', cleanLast)
+          .maybeSingle();
 
-        const data = await res.json();
+        if (findError) throw findError;
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Rename failed');
+        let guestId = '';
+        if (existing) {
+          guestId = existing.id;
+        } else {
+          const { data: created, error: createError } = await supabase
+            .from('guests')
+            .insert({
+              first_name: cleanFirst,
+              last_name: cleanLast,
+              ip_address: clientIp,
+            })
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          guestId = created.id;
         }
 
         const sessionGuest: Guest = {
-          id: guest.id,
+          id: guestId,
           firstName: cleanFirst,
           lastName: cleanLast,
           ip: clientIp,
@@ -373,92 +468,13 @@ export default function Home() {
         setGuest(sessionGuest);
         setShowLoginModal(false);
         setIsChangingName(false);
-        fetchPhotos();
       } catch (err) {
-        console.error('Name change failed:', err);
-        alert('Не удалось изменить имя. Возможно, такой гость уже существует.');
+        console.error('Registration failed:', err);
+        setSubmitError('Произошла ошибка при входе. Попробуйте ещё раз.');
       }
-      return;
-    }
-
-    if (!isSupabaseConfigured) {
-      // Mock register guest
-      const mockGuestsStr = localStorage.getItem('mock_guests') || '[]';
-      const mockGuests = JSON.parse(mockGuestsStr);
-      let existing = mockGuests.find(
-        (g: any) => g.first_name === cleanFirst && g.last_name === cleanLast
-      );
-      
-      if (!existing) {
-        existing = {
-          id: Math.random().toString(36).substring(2, 15),
-          first_name: cleanFirst,
-          last_name: cleanLast,
-          ip_address: clientIp,
-          created_at: new Date().toISOString()
-        };
-        mockGuests.push(existing);
-        localStorage.setItem('mock_guests', JSON.stringify(mockGuests));
-      }
-      
-      const sessionGuest: Guest = {
-        id: existing.id,
-        firstName: existing.first_name,
-        lastName: existing.last_name,
-        ip: existing.ip_address
-      };
-      
-      localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
-      setGuest(sessionGuest);
-      setShowLoginModal(false);
-      setIsChangingName(false);
-      return;
-    }
-
-    try {
-      // Try to find if user already exists
-      const { data: existing, error: findError } = await supabase
-        .from('guests')
-        .select('*')
-        .eq('first_name', cleanFirst)
-        .eq('last_name', cleanLast)
-        .maybeSingle();
-
-      if (findError) throw findError;
-
-      let guestId = '';
-      if (existing) {
-        guestId = existing.id;
-      } else {
-        // Create new guest
-        const { data: created, error: createError } = await supabase
-          .from('guests')
-          .insert({
-            first_name: cleanFirst,
-            last_name: cleanLast,
-            ip_address: clientIp,
-          })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        guestId = created.id;
-      }
-
-      const sessionGuest: Guest = {
-        id: guestId,
-        firstName: cleanFirst,
-        lastName: cleanLast,
-        ip: clientIp,
-      };
-
-      localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
-      setGuest(sessionGuest);
-      setShowLoginModal(false);
-      setIsChangingName(false);
-    } catch (err) {
-      console.error('Registration failed:', err);
-      alert('Произошла ошибка при входе. Попробуйте еще раз.');
+    } finally {
+      clearTimeout(safetyTimeout);
+      setIsSubmitting(false);
     }
   };
 
@@ -934,25 +950,55 @@ export default function Home() {
                     ? 'Введите новое имя и фамилию. Подписи у ваших фотографий обновятся автоматически.'
                     : 'Введите своё имя и фамилию, чтобы делиться моментами в общей галерее.'}
                 </p>
-                <form onSubmit={handleRegister} className={styles.glassForm}>
+                <form onSubmit={handleRegister} className={styles.glassForm} noValidate>
                   <input
                     type="text"
+                    name="first-name"
                     required
+                    autoComplete="given-name"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     placeholder="Ваше Имя"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => { setFirstName(e.target.value); if (submitError) setSubmitError(''); }}
+                    disabled={isSubmitting}
                     className={styles.glassInput}
                   />
                   <input
                     type="text"
+                    name="last-name"
                     required
+                    autoComplete="family-name"
+                    enterKeyHint="go"
+                    autoCapitalize="words"
                     placeholder="Ваша Фамилия"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => { setLastName(e.target.value); if (submitError) setSubmitError(''); }}
+                    disabled={isSubmitting}
                     className={styles.glassInput}
                   />
-                  <button type="submit" className={styles.startBtn}>
-                    {isChangingName ? 'Сохранить' : 'Войти'}
+                  {submitError && (
+                    <div style={{
+                      color: '#ffb3b3',
+                      background: 'rgba(220, 53, 69, 0.15)',
+                      border: '1px solid rgba(220, 53, 69, 0.35)',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      fontSize: '0.85rem',
+                      textAlign: 'center',
+                    }}>
+                      {submitError}
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    className={styles.startBtn}
+                    disabled={isSubmitting}
+                    style={isSubmitting ? { opacity: 0.7, cursor: 'wait' } : undefined}
+                  >
+                    {isSubmitting
+                      ? 'Подождите...'
+                      : isChangingName ? 'Сохранить' : 'Войти'}
                   </button>
                 </form>
               </div>
