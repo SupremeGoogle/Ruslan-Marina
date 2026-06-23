@@ -22,6 +22,58 @@ interface Photo {
   created_at: string;
 }
 
+// Helper function to compress image on client side before upload
+const compressImage = (file: File, maxWidth = 1600, maxHeight = 1600, quality = 0.85): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image(); // Use window.Image to avoid conflict with NextJS Image component
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas 2d context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Canvas conversion to blob failed'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 export default function Home() {
   const [guest, setGuest] = useState<Guest | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -484,13 +536,24 @@ export default function Home() {
         return;
       }
 
+      // Compress image client-side to improve loading performance
+      let uploadFile: Blob | File = file;
+      let fileExt = 'jpeg';
+      try {
+        uploadFile = await compressImage(file);
+      } catch (compressErr) {
+        console.error('Client-side compression failed, uploading original:', compressErr);
+        fileExt = file.name.split('.').pop() || 'jpeg';
+      }
+
       // Upload file to Supabase storage bucket 'photos'
-      const fileExt = file.name.split('.').pop();
       const uniqueName = `${guest.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('photos')
-        .upload(uniqueName, file);
+        .upload(uniqueName, uploadFile, {
+          contentType: fileExt === 'jpeg' ? 'image/jpeg' : file.type,
+        });
 
       if (uploadError) throw uploadError;
 
