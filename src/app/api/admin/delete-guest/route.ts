@@ -5,8 +5,11 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate admin
     const passwordHeader = request.headers.get('x-admin-password');
-    const correctPassword = process.env.ADMIN_PASSWORD || 'akbar123!';
+    const correctPassword = process.env.ADMIN_PASSWORD;
 
+    if (!correctPassword) {
+      return NextResponse.json({ error: 'Admin auth is not configured' }, { status: 503 });
+    }
     if (passwordHeader !== correctPassword) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

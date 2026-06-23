@@ -193,18 +193,32 @@ export default function AdminPage() {
     }
   }, [isSupabaseConfigured]);
 
-  // 1. Verify Session Authenticated on Mount
+  // 1. Verify Session Authenticated on Mount — re-verify cached password against the server
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setIsDemoMode(true);
     }
-    
+
     const cachedPassword = sessionStorage.getItem('admin_password');
-    const correctPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'akbar123!'; // Default fallback
-    
-    if (cachedPassword === 'akbar123!') { // Checking the requested password
-      setIsAuthenticated(true);
-    }
+    if (!cachedPassword) return;
+
+    fetch('/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: cachedPassword }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.authenticated) {
+          setIsAuthenticated(true);
+        } else {
+          sessionStorage.removeItem('admin_password');
+        }
+      })
+      .catch((err) => {
+        console.error('Admin re-verify failed:', err);
+        sessionStorage.removeItem('admin_password');
+      });
   }, [isSupabaseConfigured]);
 
   // 2. Fetch Dashboard Data (Timer, Guests, Photos)
@@ -373,13 +387,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Fallback check if server offline or api not configured but matches password
-      if (password === 'akbar123!') {
-        sessionStorage.setItem('admin_password', password);
-        setIsAuthenticated(true);
-      } else {
-        setLoginError('Ошибка соединения с сервером.');
-      }
+      setLoginError('Ошибка соединения с сервером.');
     }
   };
 
