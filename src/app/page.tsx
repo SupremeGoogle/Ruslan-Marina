@@ -233,39 +233,31 @@ export default function Home() {
     return () => clearInterval(tick);
   }, [timerStatus, remainingSeconds]);
 
-  // 3. Fetch Photos (all and user-specific)
+  // 3. Fetch Photos (all and user-specific) via server endpoint — direct
+  // Supabase access is unreliable in regions where supabase.co is filtered
+  // (e.g. RU without VPN), so we always go through our own /api routes.
   const fetchPhotos = async () => {
     if (!isSupabaseConfigured) {
-      // Mock photo retrieval
       const mockPhotosStr = localStorage.getItem('mock_photos') || '[]';
       const parsedPhotos = JSON.parse(mockPhotosStr) as Photo[];
-      
-      // Sort newest first
-      const sorted = [...parsedPhotos].sort((a, b) => 
+      const sorted = [...parsedPhotos].sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setAllPhotos(sorted);
-      
       if (guest) {
-        const mine = sorted.filter(p => p.guest_id === guest.id);
-        setUserPhotos(mine);
+        setUserPhotos(sorted.filter((p) => p.guest_id === guest.id));
       }
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (data) {
-        setAllPhotos(data);
-        if (guest) {
-          const mine = data.filter((p: any) => p.guest_id === guest.id);
-          setUserPhotos(mine);
-        }
+      const res = await fetch('/api/photo/list', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const photos = (data.photos || []) as Photo[];
+      setAllPhotos(photos);
+      if (guest) {
+        setUserPhotos(photos.filter((p) => p.guest_id === guest.id));
       }
     } catch (err) {
       console.error('Error fetching photos:', err);
@@ -276,24 +268,12 @@ export default function Home() {
     fetchPhotos();
   }, [guest, isSupabaseConfigured]);
 
-  // Real-time listener for photos table changes
+  // Poll for new photos every 8 seconds. We avoid the Supabase realtime
+  // WebSocket because the supabase.co host is regionally filtered.
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-
-    const channel = supabase
-      .channel('public-photos-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'photos' },
-        () => {
-          fetchPhotos();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = setInterval(fetchPhotos, 8000);
+    return () => clearInterval(interval);
   }, [guest, isSupabaseConfigured]);
 
   // 4. Handle Guest Registration (Welcome dialog submission)
@@ -557,62 +537,58 @@ export default function Home() {
     }
 
     try {
-      // Check 5-photo upload limit from database
-      const { count, error: countError } = await supabase
-        .from('photos')
-        .select('*', { count: 'exact', head: true })
-        .eq('guest_id', guest.id);
+      // Compress image client-side to improve loading performance
+      let uploadBlob: Blob | File = file;
+      try {
+        uploadBlob = await compressImage(file);
+      } catch (compressErr) {
+        console.error('Client-side compression failed, uploading original:', compressErr);
+      }
 
-      if (countError) throw countError;
+      // Wrap blob so the server gets a filename + content-type.
+      const namedFile = new File(
+        [uploadBlob],
+        file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+        { type: 'image/jpeg' }
+      );
 
-      if (count && count >= 5) {
-        alert('Вы уже загрузили максимальное количество фотографий (5). Удалите одну, чтобы заменить её.');
-        setUploadingIndex(null);
+      const formData = new FormData();
+      formData.append('file', namedFile);
+      formData.append('guestId', guest.id);
+      formData.append('guestName', `${guest.firstName} ${guest.lastName}`);
+
+      // 60s timeout for the upload — large photos on slow uplinks need room.
+      const controller = new AbortController();
+      const uploadTimeout = setTimeout(() => controller.abort(), 60000);
+
+      let res: Response;
+      try {
+        res = await fetch('/api/photo/upload', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(uploadTimeout);
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        if (res.status === 409) {
+          alert('Вы уже загрузили максимальное количество фотографий (5). Удалите одну, чтобы заменить её.');
+        } else {
+          alert(data.error || 'Не удалось загрузить изображение. Попробуйте еще раз.');
+        }
         return;
       }
 
-      // Compress image client-side to improve loading performance
-      let uploadFile: Blob | File = file;
-      let fileExt = 'jpeg';
-      try {
-        uploadFile = await compressImage(file);
-      } catch (compressErr) {
-        console.error('Client-side compression failed, uploading original:', compressErr);
-        fileExt = file.name.split('.').pop() || 'jpeg';
-      }
-
-      // Upload file to Supabase storage bucket 'photos'
-      const uniqueName = `${guest.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(uniqueName, uploadFile, {
-          contentType: fileExt === 'jpeg' ? 'image/jpeg' : file.type,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('photos')
-        .getPublicUrl(uniqueName);
-
-      // Save to photos database
-      const { error: dbError } = await supabase
-        .from('photos')
-        .insert({
-          guest_id: guest.id,
-          guest_name: `${guest.firstName} ${guest.lastName}`,
-          url: publicUrl,
-          storage_path: uniqueName
-        });
-
-      if (dbError) throw dbError;
-
-      fetchPhotos();
+      await fetchPhotos();
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('Не удалось загрузить изображение. Попробуйте еще раз.');
+      const msg = err instanceof Error && err.name === 'AbortError'
+        ? 'Загрузка занимает слишком много времени. Попробуйте ещё раз с более стабильным интернетом.'
+        : 'Не удалось загрузить изображение. Попробуйте еще раз.';
+      alert(msg);
     } finally {
       setUploadingIndex(null);
       activeUploadIndexRef.current = null;
@@ -635,24 +611,17 @@ export default function Home() {
     }
 
     try {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('photos')
-        .remove([storagePath]);
-
-      if (storageError) {
-        console.warn('Storage deletion warning:', storageError);
+      if (!guest) return;
+      const res = await fetch('/api/photo/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId, guestId: guest.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('photos')
-        .delete()
-        .eq('id', photoId);
-
-      if (dbError) throw dbError;
-
-      fetchPhotos();
+      await fetchPhotos();
     } catch (err) {
       console.error('Delete failed:', err);
       alert('Не удалось удалить фотографию.');
@@ -660,8 +629,12 @@ export default function Home() {
   };
 
   const downloadPhoto = async (url: string, filename: string) => {
+    // Route through the Vercel image optimizer so the bytes come from Vercel's
+    // CDN even when supabase.co is filtered on the user's network.
+    const proxiedUrl = `/_next/image?url=${encodeURIComponent(url)}&w=3840&q=90`;
     try {
-      const response = await fetch(url, { mode: 'cors' });
+      const response = await fetch(proxiedUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -672,8 +645,8 @@ export default function Home() {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error('Direct download failed, opening in new tab:', err);
-      window.open(url, '_blank');
+      console.error('Download failed:', err);
+      window.open(proxiedUrl, '_blank');
     }
   };
 
@@ -828,12 +801,15 @@ export default function Home() {
                       </div>
                     ) : photo ? (
                       <>
-                        <img 
-                          src={photo.url} 
+                        <Image
+                          src={photo.url}
                           alt={`Кадр ${i + 1}`}
                           className={styles.slotImage}
+                          fill
+                          sizes="(max-width: 480px) 50vw, (max-width: 900px) 33vw, 20vw"
+                          style={{ objectFit: 'cover' }}
                         />
-                        <button 
+                        <button
                           className={styles.slotDeleteBtn}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1035,10 +1011,15 @@ export default function Home() {
             >
               ✕
             </button>
-            <img 
-              src={activeLightboxPhoto.url} 
-              alt={`Фото от ${activeLightboxPhoto.guest_name}`} 
+            <Image
+              src={activeLightboxPhoto.url}
+              alt={`Фото от ${activeLightboxPhoto.guest_name}`}
               className={styles.lightboxImage}
+              width={1600}
+              height={1600}
+              sizes="100vw"
+              priority
+              style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '85vh', objectFit: 'contain' }}
             />
             <div className={styles.lightboxMeta}>
               <div className={styles.lightboxAuthor}>
