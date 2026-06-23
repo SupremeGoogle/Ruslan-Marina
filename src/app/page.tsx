@@ -123,34 +123,43 @@ export default function Home() {
         console.error('Failed to detect IP, using local fallback:', err);
       }
 
-      // Load cached session
-      const cached = localStorage.getItem('wedding_guest_session');
-      if (cached) {
-        const parsedGuest = JSON.parse(cached) as Guest;
-        if (isSupabaseConfigured) {
-          try {
-            const { data, error } = await supabase
-              .from('guests')
-              .select('*')
-              .eq('id', parsedGuest.id)
-              .single();
-              
-            if (error || !data) {
-              console.warn('Cached guest session not found in DB, clearing cache');
-              localStorage.removeItem('wedding_guest_session');
-              setGuest(null);
-              setShowLoginModal(true);
+      // Load cached session safely
+      try {
+        const cached = localStorage.getItem('wedding_guest_session');
+        if (cached) {
+          const parsedGuest = JSON.parse(cached) as Guest;
+          if (parsedGuest && parsedGuest.id) {
+            if (isSupabaseConfigured) {
+              const { data, error } = await supabase
+                .from('guests')
+                .select('*')
+                .eq('id', parsedGuest.id)
+                .single();
+                
+              if (error || !data) {
+                console.warn('Cached guest session not found in DB, clearing cache');
+                localStorage.removeItem('wedding_guest_session');
+                setGuest(null);
+                setShowLoginModal(true);
+              } else {
+                setGuest(parsedGuest);
+              }
             } else {
               setGuest(parsedGuest);
             }
-          } catch (err) {
-            console.error('Error verifying guest session:', err);
-            setGuest(parsedGuest); // fallback to cached on network error
+          } else {
+            // Invalid session object
+            localStorage.removeItem('wedding_guest_session');
+            setGuest(null);
+            setShowLoginModal(true);
           }
         } else {
-          setGuest(parsedGuest);
+          setShowLoginModal(true);
         }
-      } else {
+      } catch (sessionErr) {
+        console.error('Failed to initialize guest session, clearing cache:', sessionErr);
+        localStorage.removeItem('wedding_guest_session');
+        setGuest(null);
         setShowLoginModal(true);
       }
       setLoading(false);
@@ -655,6 +664,25 @@ export default function Home() {
   };
 
   const timerDigits = formatTime(remainingSeconds);
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#fbf9f6',
+        color: 'var(--color-primary)',
+        fontFamily: 'var(--font-serif)',
+        gap: '16px'
+      }}>
+        <div className={styles.spinner} style={{ borderColor: 'rgba(181, 141, 114, 0.2)', borderTopColor: 'var(--color-primary)' }}></div>
+        <div style={{ fontSize: '1rem', letterSpacing: '0.05em' }}>Загрузка...</div>
+      </div>
+    );
+  }
 
   // Determine if uploading is globally disabled (timer is not running)
   const isUploadDisabled = 
