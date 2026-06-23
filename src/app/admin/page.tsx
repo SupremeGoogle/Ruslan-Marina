@@ -251,22 +251,35 @@ export default function AdminPage() {
 
     try {
       setLoading(true);
-      // Fetch Timer
-      const { data: timerData, error: timerError } = await supabase
-        .from('timer_state')
-        .select('*')
-        .eq('id', 1)
-        .single();
-
-      if (timerError) throw timerError;
-      if (timerData) {
-        setTimerStatus(timerData.status as any);
-        if (timerData.status === 'running') {
-          const lastUpdated = new Date(timerData.updated_at).getTime();
-          const elapsed = Math.floor((Date.now() - lastUpdated) / 1000);
-          setRemainingSeconds(Math.max(0, timerData.remaining_seconds - elapsed));
+      
+      // Fetch Timer from API to prevent local clock desync
+      try {
+        const timerRes = await fetch('/api/timer');
+        if (timerRes.ok) {
+          const timerData = await timerRes.json();
+          setTimerStatus(timerData.status);
+          setRemainingSeconds(timerData.remainingSeconds);
         } else {
-          setRemainingSeconds(timerData.remaining_seconds);
+          throw new Error('Failed to fetch timer from API');
+        }
+      } catch (timerErr) {
+        console.error('Error fetching timer via API, falling back to direct fetch:', timerErr);
+        const { data: timerData, error: timerError } = await supabase
+          .from('timer_state')
+          .select('*')
+          .eq('id', 1)
+          .single();
+
+        if (timerError) throw timerError;
+        if (timerData) {
+          setTimerStatus(timerData.status as any);
+          if (timerData.status === 'running') {
+            const lastUpdated = new Date(timerData.updated_at).getTime();
+            const elapsed = Math.floor((Date.now() - lastUpdated) / 1000);
+            setRemainingSeconds(Math.max(0, timerData.remaining_seconds - elapsed));
+          } else {
+            setRemainingSeconds(timerData.remaining_seconds);
+          }
         }
       }
 

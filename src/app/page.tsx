@@ -86,44 +86,33 @@ export default function Home() {
 
   // 2. Fetch and synchronize Timer State
   const fetchTimerState = async () => {
-    if (!isSupabaseConfigured) {
-      // Mock timer state from LocalStorage
-      const mockTimer = localStorage.getItem('mock_timer_state');
-      if (mockTimer) {
-        const parsed = JSON.parse(mockTimer);
-        setTimerStatus(parsed.status);
-        
-        if (parsed.status === 'running') {
-          const elapsed = Math.floor((Date.now() - parsed.updatedAt) / 1000);
-          setRemainingSeconds(Math.max(0, parsed.remainingSeconds - elapsed));
-        } else {
-          setRemainingSeconds(parsed.remainingSeconds);
-        }
-      }
-      return;
-    }
-
     try {
-      const { data, error } = await supabase
-        .from('timer_state')
-        .select('*')
-        .eq('id', 1)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setTimerStatus(data.status as any);
-        if (data.status === 'running') {
-          // Adjust remaining seconds based on server elapsed time
-          const lastUpdated = new Date(data.updated_at).getTime();
-          const elapsed = Math.floor((Date.now() - lastUpdated) / 1000);
-          setRemainingSeconds(Math.max(0, data.remaining_seconds - elapsed));
-        } else {
-          setRemainingSeconds(data.remaining_seconds);
-        }
+      const res = await fetch('/api/timer');
+      if (!res.ok) throw new Error('Failed to fetch timer');
+      const data = await res.json();
+      
+      setTimerStatus(data.status);
+      setRemainingSeconds(data.remainingSeconds);
+      if (data.isDemo !== undefined) {
+        setIsDemoMode(data.isDemo);
       }
     } catch (err) {
       console.error('Error fetching timer state:', err);
+      if (!isSupabaseConfigured) {
+        // Mock timer state from LocalStorage fallback
+        const mockTimer = localStorage.getItem('mock_timer_state');
+        if (mockTimer) {
+          const parsed = JSON.parse(mockTimer);
+          setTimerStatus(parsed.status);
+          
+          if (parsed.status === 'running') {
+            const elapsed = Math.floor((Date.now() - parsed.updatedAt) / 1000);
+            setRemainingSeconds(Math.max(0, parsed.remainingSeconds - elapsed));
+          } else {
+            setRemainingSeconds(parsed.remainingSeconds);
+          }
+        }
+      }
     }
   };
 
