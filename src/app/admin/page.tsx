@@ -118,6 +118,7 @@ export default function AdminPage() {
   const [winner, setWinner] = useState<ParticipantProgress | null>(null);
   const [manualSelections, setManualSelections] = useState<Record<string, boolean>>({});
   const [archiveUrl, setArchiveUrl] = useState<string | null>(null);
+  const [isCreatingArchive, setIsCreatingArchive] = useState(false);
 
   const isSupabaseConfigured = !!supabase;
 
@@ -144,9 +145,10 @@ export default function AdminPage() {
     }
   }, [isSupabaseConfigured]);
 
-  const triggerCreateArchive = React.useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+  const triggerCreateArchive = React.useCallback(async (): Promise<string | null> => {
+    if (!isSupabaseConfigured) return null;
     const adminPassword = sessionStorage.getItem('admin_password') || '';
+    setIsCreatingArchive(true);
     try {
       const res = await fetch('/api/admin/archive', {
         method: 'POST',
@@ -159,13 +161,28 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setArchiveUrl(data.archiveUrl);
-      } else {
-        console.error('Failed to create archive:', data.error);
+        return data.archiveUrl as string;
       }
+      alert('Не удалось создать архив: ' + (data.error || 'unknown error'));
+      return null;
     } catch (err) {
       console.error('Error triggering archive creation:', err);
+      alert('Ошибка при создании архива.');
+      return null;
+    } finally {
+      setIsCreatingArchive(false);
     }
   }, [isSupabaseConfigured]);
+
+  const triggerDownloadArchive = React.useCallback(async () => {
+    let url = archiveUrl;
+    if (!url) {
+      url = await triggerCreateArchive();
+      if (!url) return;
+    }
+    // Open in a new tab/window so the download starts without leaving the panel
+    window.open(url, '_blank');
+  }, [archiveUrl, triggerCreateArchive]);
 
   const handleDeleteArchive = React.useCallback(async () => {
     if (!confirm('Вы действительно хотите удалить архив со всеми фотографиями?')) return;
@@ -782,59 +799,76 @@ export default function AdminPage() {
 
               {/* Archive management section */}
               <div style={{ borderTop: '1px dashed rgba(181, 141, 114, 0.2)', paddingTop: '16px', marginTop: '16px', width: '100%' }}>
-                <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)', textAlign: 'center', fontWeight: 600 }}>Архив с фотографиями</h4>
-                {archiveUrl ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                    <a 
-                      href={archiveUrl} 
-                      download="all_wedding_photos.zip"
-                      className="btn-primary"
-                      style={{ 
-                        fontSize: '0.85rem', 
-                        padding: '8px 16px', 
-                        textDecoration: 'none', 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        backgroundColor: 'var(--color-primary)',
-                        color: 'white',
-                        borderRadius: 'var(--radius-full)',
-                        fontWeight: 500,
-                        border: 'none',
-                        boxShadow: 'var(--shadow-sm)'
-                      }}
-                    >
-                      ⬇️ Скачать архив (.zip)
-                    </a>
-                    <button 
+                <h4 style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--text-main)', textAlign: 'center', fontWeight: 600 }}>Архив с фотографиями</h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', width: '100%' }}>
+                  <button
+                    onClick={triggerCreateArchive}
+                    disabled={isCreatingArchive}
+                    className="btn-secondary"
+                    style={{
+                      fontSize: '0.85rem',
+                      padding: '8px 16px',
+                      borderRadius: 'var(--radius-full)',
+                      width: '100%',
+                      maxWidth: '260px',
+                      opacity: isCreatingArchive ? 0.6 : 1,
+                      cursor: isCreatingArchive ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {isCreatingArchive
+                      ? '⏳ Создаём архив...'
+                      : archiveUrl ? '🔄 Пересоздать архив' : '📦 Создать архив сейчас'}
+                  </button>
+
+                  <button
+                    onClick={triggerDownloadArchive}
+                    disabled={isCreatingArchive}
+                    className="btn-primary"
+                    style={{
+                      fontSize: '0.85rem',
+                      padding: '10px 16px',
+                      borderRadius: 'var(--radius-full)',
+                      width: '100%',
+                      maxWidth: '260px',
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'white',
+                      fontWeight: 500,
+                      border: 'none',
+                      boxShadow: 'var(--shadow-sm)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      opacity: isCreatingArchive ? 0.6 : 1,
+                      cursor: isCreatingArchive ? 'wait' : 'pointer',
+                    }}
+                  >
+                    ⬇️ Скачать архив (.zip)
+                  </button>
+
+                  {archiveUrl && (
+                    <button
                       onClick={handleDeleteArchive}
                       className="btn-secondary"
-                      style={{ 
-                        fontSize: '0.8rem', 
-                        padding: '6px 12px', 
-                        color: '#d9383a', 
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '6px 12px',
+                        color: '#d9383a',
                         borderColor: 'rgba(217, 56, 58, 0.3)',
                         backgroundColor: 'transparent',
-                        borderRadius: 'var(--radius-full)'
+                        borderRadius: 'var(--radius-full)',
+                        marginTop: '4px',
                       }}
                     >
                       🗑️ Удалить архив
                     </button>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
-                      Архив создается автоматически при запуске рандомайзера.
-                    </p>
-                    <button 
-                      onClick={triggerCreateArchive}
-                      className="btn-secondary"
-                      style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 'var(--radius-full)' }}
-                    >
-                      📦 Создать архив сейчас
-                    </button>
-                  </div>
-                )}
+                  )}
+
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', margin: '4px 0 0', lineHeight: 1.4 }}>
+                    «Скачать» сначала пересоздаст архив, если его ещё нет.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
