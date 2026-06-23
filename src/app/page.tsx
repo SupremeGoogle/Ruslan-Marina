@@ -430,38 +430,37 @@ export default function Home() {
       }
 
       try {
-        const { data: existing, error: findError } = await supabase
-          .from('guests')
-          .select('*')
-          .eq('first_name', cleanFirst)
-          .eq('last_name', cleanLast)
-          .maybeSingle();
+        // Server-side registration via /api/guest/register: service-role
+        // bypasses RLS and we get an explicit fetch timeout.
+        const controller = new AbortController();
+        const requestTimeout = setTimeout(() => controller.abort(), 10000);
 
-        if (findError) throw findError;
+        let res: Response;
+        try {
+          res = await fetch('/api/guest/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: cleanFirst,
+              lastName: cleanLast,
+              ip: clientIp,
+            }),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(requestTimeout);
+        }
 
-        let guestId = '';
-        if (existing) {
-          guestId = existing.id;
-        } else {
-          const { data: created, error: createError } = await supabase
-            .from('guests')
-            .insert({
-              first_name: cleanFirst,
-              last_name: cleanLast,
-              ip_address: clientIp,
-            })
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          guestId = created.id;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success || !data.guest) {
+          throw new Error(data.error || `HTTP ${res.status}`);
         }
 
         const sessionGuest: Guest = {
-          id: guestId,
-          firstName: cleanFirst,
-          lastName: cleanLast,
-          ip: clientIp,
+          id: data.guest.id,
+          firstName: data.guest.firstName,
+          lastName: data.guest.lastName,
+          ip: data.guest.ip ?? clientIp,
         };
 
         localStorage.setItem('wedding_guest_session', JSON.stringify(sessionGuest));
@@ -470,7 +469,10 @@ export default function Home() {
         setIsChangingName(false);
       } catch (err) {
         console.error('Registration failed:', err);
-        setSubmitError('Произошла ошибка при входе. Попробуйте ещё раз.');
+        const msg = err instanceof Error && err.name === 'AbortError'
+          ? 'Сервер слишком долго отвечает. Проверьте интернет и попробуйте ещё раз.'
+          : 'Не удалось войти. Проверьте подключение и попробуйте ещё раз.';
+        setSubmitError(msg);
       }
     } finally {
       clearTimeout(safetyTimeout);
