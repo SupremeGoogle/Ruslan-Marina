@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/utils/supabaseClient';
 import JSZip from 'jszip';
 
+// Vercel function timeout: archiving 100+ photos through Supabase can take
+// >10s, so request the full 60s budget available on Hobby / 300s on Pro.
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     // Authenticate admin
@@ -25,22 +30,43 @@ export async function POST(request: NextRequest) {
     const ARCHIVE_FILENAME = 'all_wedding_photos.zip';
     const BUCKET_NAME = 'archives';
 
-    // Helper: Ensure the storage bucket exists
-    const ensureBucketExists = async () => {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const exists = buckets?.some((b: any) => b.id === BUCKET_NAME);
-      if (!exists) {
-        await supabase.storage.createBucket(BUCKET_NAME, {
-          public: true,
-          fileSizeLimit: 104857600 // 100MB
-        });
+    // Helper: Ensure the storage bucket exists. Returns { ok, error } so the
+    // caller can surface a clear message instead of failing silently later.
+    const ensureBucketExists = async (): Promise<{ ok: boolean; error?: string }> => {
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      if (listError) {
+        return { ok: false, error: `listBuckets: ${listError.message}` };
       }
+      const exists = buckets?.some((b: any) => b.id === BUCKET_NAME);
+      if (exists) return { ok: true };
+
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 524288000, // 500MB cap for the archive blob
+      });
+      if (createError) {
+        // Race-condition: a parallel call may have already created it.
+        const { data: postBuckets } = await supabase.storage.listBuckets();
+        const nowExists = postBuckets?.some((b: any) => b.id === BUCKET_NAME);
+        if (nowExists) return { ok: true };
+        return { ok: false, error: `createBucket: ${createError.message}` };
+      }
+      return { ok: true };
     };
 
     if (action === 'create') {
-      await ensureBucketExists();
+      const bucketState = await ensureBucketExists();
+      if (!bucketState.ok) {
+        console.error('ensureBucketExists failed:', bucketState.error);
+        return NextResponse.json(
+          { error: `Не удалось подготовить bucket архива: ${bucketState.error}. Создайте bucket "archives" вручную в Supabase Storage (Public).` },
+          { status: 500 }
+        );
+      }
 
-      // 1. Fetch all photo records
+      // 1. Fetch all photo records (downloading bytes from the URL works even
+      // if the photos bucket itself has tight policies, because URLs are
+      // public).
       const { data: photos, error: fetchError } = await supabase
         .from('photos')
         .select('*')
@@ -57,37 +83,59 @@ export async function POST(request: NextRequest) {
 
       // 2. Initialize JSZip
       const zip = new JSZip();
+      const failures: string[] = [];
 
-      // Download each image and append it to the zip file
-      const downloadPromises = photos.map(async (photo: any, idx: number) => {
-        try {
-          const response = await fetch(photo.url);
-          if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+      // Download photos with limited concurrency so we don't overwhelm
+      // Supabase or run out of memory in the serverless function.
+      const CONCURRENCY = 6;
+      let cursor = 0;
+      const workers = Array.from({ length: CONCURRENCY }).map(async () => {
+        while (true) {
+          const idx = cursor++;
+          if (idx >= photos.length) return;
+          const photo: any = photos[idx];
+          try {
+            // Prefer pulling bytes from Storage via the service client (no
+            // public URL roundtrip). Fall back to public URL fetch.
+            let buffer: Buffer | null = null;
+            if (photo.storage_path) {
+              const { data: blob, error: dlError } = await supabase.storage
+                .from('photos')
+                .download(photo.storage_path);
+              if (!dlError && blob) {
+                buffer = Buffer.from(await blob.arrayBuffer());
+              }
+            }
+            if (!buffer) {
+              const response = await fetch(photo.url);
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              buffer = Buffer.from(await response.arrayBuffer());
+            }
 
-          // Get file extension from URL or fallback
-          let ext = 'jpg';
-          const urlPath = new URL(photo.url).pathname;
-          const match = urlPath.match(/\.([a-zA-Z0-9]+)(?:[\?#]|$)/);
-          if (match && match[1]) {
-            ext = match[1];
+            let ext = 'jpg';
+            try {
+              const urlPath = new URL(photo.url).pathname;
+              const match = urlPath.match(/\.([a-zA-Z0-9]+)(?:[\?#]|$)/);
+              if (match && match[1]) ext = match[1];
+            } catch {/* ignore */}
+
+            const safeName = String(photo.guest_name || 'guest').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+            const fileName = `${String(idx + 1).padStart(3, '0')}_${safeName}_${String(photo.id).substring(0, 5)}.${ext}`;
+            zip.file(fileName, buffer);
+          } catch (err) {
+            console.error(`Failed to fetch photo ${photo.url}:`, err);
+            failures.push(photo.id);
           }
-
-          // Safe filename prefix: replace Cyrillic/spaces or use guest_name
-          const safeName = photo.guest_name.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
-          const fileName = `${idx + 1}_${safeName}_${photo.id.substring(0, 5)}.${ext}`;
-
-          zip.file(fileName, buffer);
-        } catch (err) {
-          console.error(`Failed to download image ${photo.url}:`, err);
         }
       });
 
-      await Promise.all(downloadPromises);
+      await Promise.all(workers);
 
       // 3. Generate ZIP buffer
-      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      const zipBuffer = await zip.generateAsync({
+        type: 'nodebuffer',
+        compression: 'STORE', // photos are already JPEG-compressed
+      });
 
       // 4. Upload ZIP buffer to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -99,7 +147,10 @@ export async function POST(request: NextRequest) {
 
       if (uploadError) {
         console.error('Error uploading zip archive:', uploadError);
-        return NextResponse.json({ error: 'Failed to upload zip archive' }, { status: 500 });
+        return NextResponse.json(
+          { error: `Не удалось загрузить ZIP в bucket "${BUCKET_NAME}": ${uploadError.message}` },
+          { status: 500 }
+        );
       }
 
       // Get public URL
@@ -107,7 +158,12 @@ export async function POST(request: NextRequest) {
         .from(BUCKET_NAME)
         .getPublicUrl(ARCHIVE_FILENAME);
 
-      return NextResponse.json({ success: true, archiveUrl: publicUrl });
+      return NextResponse.json({
+        success: true,
+        archiveUrl: publicUrl,
+        photoCount: photos.length,
+        failed: failures.length,
+      });
     }
 
     if (action === 'delete') {
