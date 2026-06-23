@@ -107,6 +107,9 @@ export default function Home() {
 
   // 1. Detect IP and load guest session
   useEffect(() => {
+    // Hard safety: never let the loading screen hang for more than 5s
+    const safetyTimeout = setTimeout(() => setLoading(false), 5000);
+
     async function initSession() {
       // Check demo mode
       if (!isSupabaseConfigured) {
@@ -114,57 +117,62 @@ export default function Home() {
         console.warn('Supabase credentials not configured. Running in Demo Mode.');
       }
 
-      // Fetch IP
-      try {
-        const ipRes = await fetch('/api/ip');
-        const ipData = await ipRes.json();
-        setClientIp(ipData.ip || '127.0.0.1');
-      } catch (err) {
-        console.error('Failed to detect IP, using local fallback:', err);
-      }
+      // Fetch IP in background
+      fetch('/api/ip')
+        .then(res => res.json())
+        .then(data => setClientIp(data.ip || '127.0.0.1'))
+        .catch(err => console.error('Failed to detect IP, using local fallback:', err));
 
-      // Load cached session safely
+      // Load cached session safely and immediately show page
       try {
         const cached = localStorage.getItem('wedding_guest_session');
         if (cached) {
           const parsedGuest = JSON.parse(cached) as Guest;
           if (parsedGuest && parsedGuest.id) {
+            // Instantly show the guest page
+            setGuest(parsedGuest);
+            setLoading(false);
+
+            // Verify in the background if guest still exists in DB
             if (isSupabaseConfigured) {
-              const { data, error } = await supabase
+              supabase
                 .from('guests')
-                .select('*')
+                .select('id')
                 .eq('id', parsedGuest.id)
-                .single();
-                
-              if (error || !data) {
-                console.warn('Cached guest session not found in DB, clearing cache');
-                localStorage.removeItem('wedding_guest_session');
-                setGuest(null);
-                setShowLoginModal(true);
-              } else {
-                setGuest(parsedGuest);
-              }
-            } else {
-              setGuest(parsedGuest);
+                .single()
+                .then(({ data, error }: { data: any; error: any }) => {
+                  if (error || !data) {
+                    console.warn('Cached guest session not found in DB, clearing cache');
+                    localStorage.removeItem('wedding_guest_session');
+                    setGuest(null);
+                    setShowLoginModal(true);
+                  }
+                })
+                .catch((err: unknown) => {
+                  console.error('Failed to verify guest in background:', err);
+                });
             }
           } else {
             // Invalid session object
             localStorage.removeItem('wedding_guest_session');
             setGuest(null);
             setShowLoginModal(true);
+            setLoading(false);
           }
         } else {
           setShowLoginModal(true);
+          setLoading(false);
         }
       } catch (sessionErr) {
         console.error('Failed to initialize guest session, clearing cache:', sessionErr);
         localStorage.removeItem('wedding_guest_session');
         setGuest(null);
         setShowLoginModal(true);
+        setLoading(false);
       }
-      setLoading(false);
     }
     initSession();
+    return () => clearTimeout(safetyTimeout);
   }, [isSupabaseConfigured]);
 
   // 2. Fetch and synchronize Timer State
